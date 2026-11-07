@@ -1,43 +1,1006 @@
 
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Гамшгаас хамгаалах сургалтын систем</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #edf1f7;
+  color: #263445;
+}
+
+header {
+  background: #285b94;
+  color: white;
+  text-align: center;
+  padding: 28px 15px;
+}
+
+header h1 {
+  font-size: 28px;
+  margin: 0 0 12px;
+}
+
+header p {
+  margin: 0;
+  font-size: 18px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 25px auto;
+  padding: 15px;
+}
+
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 5px 20px #0000000d;
+  margin-bottom: 20px;
+}
+
+h2 {
+  color: #285b94;
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  margin: 15px 0 7px;
+  font-weight: bold;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 16px;
+  background: #f8fafc;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 13px 20px;
+  background: #285b94;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+button:hover {
+  background: #194574;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #c0392b;
+}
+
+.btn-secondary {
+  background: #64748b;
+}
+
+.btn-success {
+  background: #16834a;
+}
+
+.full {
+  width: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.message {
+  margin-top: 12px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.success {
+  color: #16834a;
+}
+
+.error {
+  color: #c0392b;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toolbar button {
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  min-width: 850px;
+}
+
+th, td {
+  border: 1px solid #dbe2ea;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #285b94;
+  color: white;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+footer {
+  text-align: center;
+  color: #718096;
+  padding: 25px;
+}
+
+@media (max-width: 650px) {
+  header h1 {
+    font-size: 22px;
+  }
+
+  header p {
+    font-size: 15px;
+  }
+
+  .container {
+    padding: 10px;
+    margin: 15px auto;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  .toolbar {
+    display: block;
+  }
+
+  .toolbar button {
+    margin-top: 10px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>ГАМШГААС ХАМГААЛАХ СУРГАЛТЫН СИСТЕМ</h1>
+  <p>Тайлан бүртгэл, мэдээллийн нэгдсэн систем</p>
+</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<section id="loginSection" class="card">
+  <h2>Системд нэвтрэх</h2>
+
+  <label for="email">И-мэйл</label>
+  <input id="email" type="email" autocomplete="username"
+         placeholder="И-мэйл хаяг">
+
+  <label for="password">Нууц үг</label>
+  <input id="password" type="password"
+         autocomplete="current-password"
+         placeholder="Нууц үг">
+
+  <button id="loginBtn" class="full" onclick="login()">
+    Нэвтрэх
+  </button>
+
+  <div id="loginStatus" class="message"></div>
+</section>
+
+<!-- MAIN APP -->
+<section id="appSection" class="hidden">
+
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h2>Системийн үндсэн хэсэг</h2>
+        <div id="userInfo"></div>
+      </div>
+
+      <button class="btn-secondary" onclick="logout()">
+        Гарах
+      </button>
+    </div>
+  </div>
+
+  <!-- REPORT FORM -->
+  <div class="card">
+    <h2 id="formTitle">Тайлан бүртгэх</h2>
+
+    <input type="hidden" id="editId">
+
+    <div class="grid">
+
+      <div>
+        <label for="province">Аймаг / Нийслэл</label>
+        <select id="province" onchange="loadUnits()">
+          <option value="">Сонгоно уу</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="unit">Сум / Дүүрэг</label>
+        <select id="unit">
+          <option value="">Эхлээд аймаг сонгоно уу</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="reportType">Тайлангийн төрөл</label>
+        <select id="reportType">
+          <option value="SM1">SM1 тайлан</option>
+          <option value="Сургалтын тайлан">Сургалтын тайлан</option>
+          <option value="Мэдээлэл">Мэдээлэл</option>
+          <option value="Бусад">Бусад</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="period">Тайлангийн хугацаа</label>
+        <select id="period" onchange="changePeriod()">
+          <option value="month">Сарын тайлан</option>
+          <option value="quarter">Улирлын тайлан</option>
+          <option value="half">Хагас жилийн тайлан</option>
+          <option value="year">Жилийн тайлан</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="reportYear">Он</label>
+        <select id="reportYear"></select>
+      </div>
+
+      <div id="monthBox">
+        <label for="reportMonth">Сар</label>
+        <select id="reportMonth">
+          <option value="1">1-р сар</option>
+          <option value="2">2-р сар</option>
+          <option value="3">3-р сар</option>
+          <option value="4">4-р сар</option>
+          <option value="5">5-р сар</option>
+          <option value="6">6-р сар</option>
+          <option value="7">7-р сар</option>
+          <option value="8">8-р сар</option>
+          <option value="9">9-р сар</option>
+          <option value="10">10-р сар</option>
+          <option value="11">11-р сар</option>
+          <option value="12">12-р сар</option>
+        </select>
+      </div>
+
+      <div id="quarterBox" class="hidden">
+        <label for="reportQuarter">Улирал</label>
+        <select id="reportQuarter">
+          <option value="1">I улирал</option>
+          <option value="2">II улирал</option>
+          <option value="3">III улирал</option>
+          <option value="4">IV улирал</option>
+        </select>
+      </div>
+
+      <div id="halfBox" class="hidden">
+        <label for="reportHalf">Хагас жил</label>
+        <select id="reportHalf">
+          <option value="1">I хагас жил</option>
+          <option value="2">II хагас жил</option>
+        </select>
+      </div>
+
+    </div>
+
+    <label for="title">Тайлангийн гарчиг</label>
+    <input id="title" placeholder="Тайлангийн нэр">
+
+    <label for="description">Тайлбар / Агуулга</label>
+    <textarea id="description"
+      placeholder="Тайлангийн мэдээлэл, агуулгыг бичнэ үү"></textarea>
+
+    <button id="saveBtn" onclick="saveReport()">
+      Тайлан хадгалах
+    </button>
+
+    <button id="cancelBtn" class="btn-secondary hidden"
+            onclick="cancelEdit()">
+      Болих
+    </button>
+
+    <div id="formStatus" class="message"></div>
+  </div>
+
+  <!-- REPORT LIST -->
+  <div class="card">
+    <div class="toolbar">
+      <h2>Миний тайлангууд</h2>
+      <button onclick="loadReports()">Шинэчлэх</button>
+    </div>
+
+    <div id="reportStatus" class="message"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Аймаг / Сум</th>
+            <th>Төрөл</th>
+            <th>Хугацаа</th>
+            <th>Гарчиг</th>
+            <th>Тайлбар</th>
+            <th>Үйлдэл</th>
+          </tr>
+        </thead>
+        <tbody id="reportTable">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</div>
+
+<footer>
+  Гамшгаас хамгаалах сургалтын систем
+</footer>
+
+<script>
+// ======================================
+// SUPABASE CONNECTION
+// ======================================
+
+const SUPABASE_URL =
+  "https://djzlkhvkpmhgxoykeozt.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+let currentUser = null;
+let provinces = [];
+let units = [];
+let reports = [];
+
+// ======================================
+// MESSAGE
+// ======================================
+
+function showMessage(id, message, type = "") {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  el.textContent = message;
+  el.className = "message " + type;
+}
+
+// ======================================
+// LOGIN
+// ======================================
+
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
-  const status = document.getElementById("loginStatus");
-  const btn = document.querySelector("button[onclick='login()']");
+  const btn = document.getElementById("loginBtn");
 
   if (!email || !password) {
-    status.textContent = "И-мэйл болон нууц үгээ оруулна уу.";
+    showMessage("loginStatus",
+      "И-мэйл болон нууц үгээ оруулна уу.", "error");
     return;
   }
 
-  status.textContent = "Нэвтэрч байна...";
-  if (btn) btn.disabled = true;
+  btn.disabled = true;
+  btn.textContent = "Нэвтэрч байна...";
+  showMessage("loginStatus", "Нэвтэрч байна...");
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password
-    });
+    const { data, error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
     if (error) {
-      status.textContent = "Нэвтрэх алдаа: " + error.message;
+      showMessage("loginStatus",
+        "Нэвтрэх алдаа: " + error.message, "error");
       return;
     }
 
     if (!data.user) {
-      status.textContent = "Хэрэглэгчийн мэдээлэл олдсонгүй.";
+      showMessage("loginStatus",
+        "Хэрэглэгч олдсонгүй.", "error");
       return;
     }
 
     currentUser = data.user;
-    status.textContent = "Амжилттай нэвтэрлээ.";
-
     await showApp();
 
   } catch (err) {
-    status.textContent = "Системийн алдаа: " + (err.message || err);
-    console.error("LOGIN ERROR:", err);
+    console.error(err);
+    showMessage("loginStatus",
+      "Системийн алдаа: " + err.message, "error");
   } finally {
-    if (btn) btn.disabled = false;
+    btn.disabled = false;
+    btn.textContent = "Нэвтрэх";
   }
 }
+
+// ======================================
+// LOGOUT
+// ======================================
+
+async function logout() {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    alert("Гарах алдаа: " + error.message);
+    return;
+  }
+
+  currentUser = null;
+
+  document.getElementById("appSection")
+    .classList.add("hidden");
+
+  document.getElementById("loginSection")
+    .classList.remove("hidden");
+
+  document.getElementById("password").value = "";
+}
+
+// ======================================
+// SHOW APP
+// ======================================
+
+async function showApp() {
+  document.getElementById("loginSection")
+    .classList.add("hidden");
+
+  document.getElementById("appSection")
+    .classList.remove("hidden");
+
+  document.getElementById("userInfo").textContent =
+    "Нэвтэрсэн хэрэглэгч: " + currentUser.email;
+
+  initYears();
+
+  await loadProvinces();
+  await loadReports();
+}
+
+// ======================================
+// YEAR
+// ======================================
+
+function initYears() {
+  const select = document.getElementById("reportYear");
+  select.innerHTML = "";
+
+  const currentYear = new Date().getFullYear();
+
+  for (let y = currentYear; y >= 2020; y--) {
+    const option = document.createElement("option");
+    option.value = y;
+    option.textContent = y + " он";
+    select.appendChild(option);
+  }
+}
+
+// ======================================
+// PROVINCES
+// ======================================
+
+async function loadProvinces() {
+  const select = document.getElementById("province");
+
+  select.innerHTML =
+    '<option value="">Аймаг сонгоно уу</option>';
+
+  const { data, error } = await supabase
+    .from("provinces")
+    .select("*")
+    .order("id");
+
+  if (error) {
+    console.error(error);
+    showMessage("formStatus",
+      "Аймаг татах алдаа: " + error.message, "error");
+    return;
+  }
+
+  provinces = data || [];
+
+  provinces.forEach(p => {
+    const option = document.createElement("option");
+    option.value = p.id;
+    option.textContent = p.name;
+    select.appendChild(option);
+  });
+}
+
+// ======================================
+// UNITS
+// ======================================
+
+async function loadUnits() {
+  const provinceId = document.getElementById("province").value;
+  const select = document.getElementById("unit");
+
+  select.innerHTML =
+    '<option value="">Сум / Дүүрэг сонгоно уу</option>';
+
+  if (!provinceId) return;
+
+  const { data, error } = await supabase
+    .from("units")
+    .select("*")
+    .eq("province_id", provinceId)
+    .order("name");
+
+  if (error) {
+    console.error(error);
+    showMessage("formStatus",
+      "Сум татах алдаа: " + error.message, "error");
+    return;
+  }
+
+  units = data || [];
+
+  units.forEach(u => {
+    const option = document.createElement("option");
+    option.value = u.id;
+    option.textContent = u.name;
+    select.appendChild(option);
+  });
+}
+
+// ======================================
+// PERIOD
+// ======================================
+
+function changePeriod() {
+  const period = document.getElementById("period").value;
+
+  document.getElementById("monthBox")
+    .classList.toggle("hidden", period !== "month");
+
+  document.getElementById("quarterBox")
+    .classList.toggle("hidden", period !== "quarter");
+
+  document.getElementById("halfBox")
+    .classList.toggle("hidden", period !== "half");
+}
+
+// ======================================
+// SAVE REPORT
+// ======================================
+
+async function saveReport() {
+  if (!currentUser) {
+    showMessage("formStatus",
+      "Эхлээд нэвтэрнэ үү.", "error");
+    return;
+  }
+
+  const provinceId =
+    document.getElementById("province").value;
+
+  const unitId =
+    document.getElementById("unit").value;
+
+  const reportType =
+    document.getElementById("reportType").value;
+
+  const period =
+    document.getElementById("period").value;
+
+  const year =
+    Number(document.getElementById("reportYear").value);
+
+  const title =
+    document.getElementById("title").value.trim();
+
+  const description =
+    document.getElementById("description").value.trim();
+
+  const editId =
+    document.getElementById("editId").value;
+
+  if (!provinceId || !unitId || !title) {
+    showMessage("formStatus",
+      "Аймаг, сум болон тайлангийн гарчгийг бөглөнө үү.",
+      "error");
+    return;
+  }
+
+  const payload = {
+    created_by: currentUser.id,
+    province_id: Number(provinceId),
+    unit_id: Number(unitId),
+    report_type: reportType,
+    report_year: year,
+    report_month: period === "month"
+      ? Number(document.getElementById("reportMonth").value)
+      : null,
+    report_quarter: period === "quarter"
+      ? Number(document.getElementById("reportQuarter").value)
+      : null,
+    report_half: period === "half"
+      ? Number(document.getElementById("reportHalf").value)
+      : null,
+    title: title,
+    description: description,
+    status: "Бүртгэсэн"
+  };
+
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  showMessage("formStatus", "Хадгалж байна...");
+
+  try {
+    let result;
+
+    if (editId) {
+      result = await supabase
+        .from("reports")
+        .update(payload)
+        .eq("id", editId)
+        .eq("created_by", currentUser.id);
+    } else {
+      result = await supabase
+        .from("reports")
+        .insert(payload);
+    }
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    showMessage("formStatus",
+      "Тайлан амжилттай хадгалагдлаа.", "success");
+
+    cancelEdit();
+    await loadReports();
+
+  } catch (err) {
+    console.error(err);
+    showMessage("formStatus",
+      "Хадгалах алдаа: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ======================================
+// LOAD REPORTS
+// ======================================
+
+async function loadReports() {
+  if (!currentUser) return;
+
+  showMessage("reportStatus", "Тайлан татаж байна...");
+
+  const { data, error } = await supabase
+    .from("reports")
+    .select("*")
+    .eq("created_by", currentUser.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    showMessage("reportStatus",
+      "Тайлан татах алдаа: " + error.message, "error");
+    return;
+  }
+
+  reports = data || [];
+
+  const provinceIds =
+    [...new Set(reports.map(r => r.province_id))];
+
+  const unitIds =
+    [...new Set(reports.map(r => r.unit_id).filter(Boolean))];
+
+  let provinceMap = {};
+  let unitMap = {};
+
+  if (provinceIds.length) {
+    const p = await supabase
+      .from("provinces")
+      .select("id,name")
+      .in("id", provinceIds);
+
+    if (p.data) {
+      p.data.forEach(x => provinceMap[x.id] = x.name);
+    }
+  }
+
+  if (unitIds.length) {
+    const u = await supabase
+      .from("units")
+      .select("id,name")
+      .in("id", unitIds);
+
+    if (u.data) {
+      u.data.forEach(x => unitMap[x.id] = x.name);
+    }
+  }
+
+  const tbody = document.getElementById("reportTable");
+  tbody.innerHTML = "";
+
+  reports.forEach((r, index) => {
+    const tr = document.createElement("tr");
+
+    const periodText = getPeriodText(r);
+
+    const values = [
+      index + 1,
+      (provinceMap[r.province_id] || "") +
+        " / " + (unitMap[r.unit_id] || ""),
+      r.report_type || "",
+      periodText,
+      r.title || "",
+      r.description || ""
+    ];
+
+    values.forEach(value => {
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+
+    const actionTd = document.createElement("td");
+
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "Засах";
+    editBtn.onclick = () => editReport(r.id);
+    actionTd.appendChild(editBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.textContent = "Устгах";
+    deleteBtn.className = "btn-danger";
+    deleteBtn.onclick = () => deleteReport(r.id);
+    actionTd.appendChild(deleteBtn);
+
+    tr.appendChild(actionTd);
+    tbody.appendChild(tr);
+  });
+
+  showMessage("reportStatus",
+    "Нийт " + reports.length + " тайлан байна.",
+    "success");
+}
+
+// ======================================
+// PERIOD TEXT
+// ======================================
+
+function getPeriodText(r) {
+  if (r.report_month) {
+    return r.report_year + " он / " +
+      r.report_month + "-р сар";
+  }
+
+  if (r.report_quarter) {
+    return r.report_year + " он / " +
+      r.report_quarter + "-р улирал";
+  }
+
+  if (r.report_half) {
+    return r.report_year + " он / " +
+      r.report_half + "-р хагас жил";
+  }
+
+  return r.report_year + " он";
+}
+
+// ======================================
+// EDIT REPORT
+// ======================================
+
+async function editReport(id) {
+  const r = reports.find(x => String(x.id) === String(id));
+  if (!r) return;
+
+  document.getElementById("editId").value = r.id;
+  document.getElementById("formTitle").textContent =
+    "Тайлан засах";
+
+  document.getElementById("reportType").value =
+    r.report_type || "SM1";
+
+  document.getElementById("period").value =
+    r.report_month ? "month" :
+    r.report_quarter ? "quarter" :
+    r.report_half ? "half" : "year";
+
+  changePeriod();
+
+  document.getElementById("reportYear").value =
+    r.report_year;
+
+  if (r.report_month) {
+    document.getElementById("reportMonth").value =
+      r.report_month;
+  }
+
+  if (r.report_quarter) {
+    document.getElementById("reportQuarter").value =
+      r.report_quarter;
+  }
+
+  if (r.report_half) {
+    document.getElementById("reportHalf").value =
+      r.report_half;
+  }
+
+  document.getElementById("province").value =
+    r.province_id;
+
+  await loadUnits();
+
+  document.getElementById("unit").value =
+    r.unit_id;
+
+  document.getElementById("title").value =
+    r.title || "";
+
+  document.getElementById("description").value =
+    r.description || "";
+
+  document.getElementById("saveBtn").textContent =
+    "Өөрчлөлт хадгалах";
+
+  document.getElementById("cancelBtn")
+    .classList.remove("hidden");
+
+  document.getElementById("formTitle")
+    .scrollIntoView({ behavior: "smooth" });
+}
+
+// ======================================
+// CANCEL EDIT
+// ======================================
+
+function cancelEdit() {
+  document.getElementById("editId").value = "";
+
+  document.getElementById("formTitle").textContent =
+    "Тайлан бүртгэх";
+
+  document.getElementById("saveBtn").textContent =
+    "Тайлан хадгалах";
+
+  document.getElementById("cancelBtn")
+    .classList.add("hidden");
+
+  document.getElementById("title").value = "";
+  document.getElementById("description").value = "";
+
+  document.getElementById("province").value = "";
+
+  document.getElementById("unit").innerHTML =
+    '<option value="">Эхлээд аймаг сонгоно уу</option>';
+
+  document.getElementById("period").value = "month";
+  changePeriod();
+
+  showMessage("formStatus", "");
+}
+
+// ======================================
+// DELETE REPORT
+// ======================================
+
+async function deleteReport(id) {
+  if (!confirm("Энэ тайланг устгах уу?")) return;
+
+  const { error } = await supabase
+    .from("reports")
+    .delete()
+    .eq("id", id)
+    .eq("created_by", currentUser.id);
+
+  if (error) {
+    alert("Устгах алдаа: " + error.message);
+    return;
+  }
+
+  await loadReports();
+}
+
+// ======================================
+// SESSION CHECK
+// ======================================
+
+async function init() {
+  initYears();
+
+  const { data, error } =
+    await supabase.auth.getSession();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (data.session) {
+    currentUser = data.session.user;
+    await showApp();
+  }
+
+  supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (session && !currentUser) {
+        currentUser = session.user;
+        await showApp();
+      }
+    }
+  );
+}
+
+init();
+
+</script>
+
+</body>
+</html>
