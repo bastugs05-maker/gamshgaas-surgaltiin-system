@@ -1,61 +1,186 @@
+
 <!DOCTYPE html>
 <html lang="mn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Гамшгаас хамгаалах сургалтын систем</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Гамшгаас хамгаалах сургалтын нэгдсэн систем</title>
 <style>
 body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#1e293b}
-header{background:#17365d;color:white;padding:22px;text-align:center}
-main{max-width:900px;margin:25px auto;padding:15px}
-.card{background:white;padding:22px;border-radius:12px;margin-bottom:18px;box-shadow:0 3px 12px #0001}
-h1{font-size:22px}h2{font-size:19px;color:#17365d}
-input,select,textarea,button{width:100%;padding:12px;margin:8px 0;box-sizing:border-box;border-radius:7px;border:1px solid #cbd5e1;font-size:16px}
-button{background:#17365d;color:white;border:0;font-weight:bold}
-button:hover{background:#244d80}
+header{background:#173b70;color:white;padding:22px}
+header h1{font-size:22px;margin:0 0 10px}
+main{max-width:900px;margin:20px auto;padding:0 12px}
+.card{background:white;padding:20px;border-radius:14px;margin-bottom:15px;border:1px solid #dbe3ef}
+h2{font-size:19px}
+input,select,textarea,button{width:100%;box-sizing:border-box;padding:12px;margin:7px 0;border:1px solid #cbd5e1;border-radius:9px;font-size:16px}
+button{background:#1769aa;color:white;border:0;font-weight:bold}
+.secondary{background:#e5edf7;color:#173b70}
 nav{display:flex;gap:8px;flex-wrap:wrap}
-nav button{width:auto;flex:1}
+nav button{flex:1}
+.hidden{display:none}
 small{color:#64748b}
+.item{padding:12px;border:1px solid #ddd;border-radius:9px;margin:8px 0}
 </style>
 </head>
 <body>
+
 <header>
-<h1>ГАМШГААС ХАМГААЛАХ СУРГАЛТЫН НЭГДСЭН СИСТЕМ</h1>
+<h1>Гамшгаас хамгаалах сургалтын нэгдсэн систем</h1>
 <p>Тайлан • Сургалт • Хяналт</p>
 </header>
+
 <main>
-<div class="card">
+
+<div class="card" id="login">
 <h2>Системд нэвтрэх</h2>
-<input type="email" placeholder="И-мэйл хаяг">
-<input type="password" placeholder="Нууц үг">
-<button onclick="alert('Supabase холбосны дараа нэвтрэлт ажиллана')">Нэвтрэх</button>
-<small>Нэвтрэлт Supabase-тай холбосны дараа ажиллана.</small>
+<input id="email" type="email" placeholder="И-мэйл хаяг">
+<input id="password" type="password" placeholder="Нууц үг">
+<button onclick="login()">Нэвтрэх</button>
+<button class="secondary" onclick="resetPassword()">Нууц үг сэргээх</button>
+<p id="message"></p>
+<small>Supabase Auth-д бүртгэлтэй хэрэглэгч нэвтэрнэ.</small>
 </div>
-<div class="card">
-<h2>Системийн үндсэн хэсгүүд</h2>
+
+<div class="card hidden" id="dashboard">
+<h2>Системийн үндсэн хэсэг</h2>
+<p id="user"></p>
 <nav>
-<button onclick="show('Тайлан')">Тайлан</button>
-<button onclick="show('Сургалт')">Сургалт</button>
-<button onclick="show('Хяналт')">Хяналт</button>
+<button onclick="showReports()">Тайлан</button>
+<button onclick="showTrainings()">Сургалт</button>
+<button onclick="showInfo()">Мэдээлэл</button>
 </nav>
-<div id="content">Хэсгээ сонгоно уу.</div>
+<button class="secondary" onclick="logout()">Гарах</button>
+<div id="content"></div>
 </div>
-<div class="card">
-<h2>Тайлангийн бүртгэл</h2>
-<input placeholder="Аймаг / Дүүрэг">
-<select><option>Тайлангийн төрөл</option><option>SM-1 сарын тайлан</option><option>Улирлын тайлан</option><option>Хагас жилийн тайлан</option><option>Жилийн тайлан</option></select>
-<input type="number" placeholder="Тайлангийн он">
-<input type="number" placeholder="Сар">
-<input placeholder="Тайлангийн нэр">
-<textarea placeholder="Тайлбар"></textarea>
-<button onclick="alert('Supabase холбосны дараа тайлан хадгалагдана')">Тайлан бүртгэх</button>
-</div>
+
 </main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-function show(x){
-document.getElementById('content').innerHTML=
-x==='Тайлан'?'Тайлангийн жагсаалт':x==='Сургалт'?'Сургалтын бүртгэл':'Тайлан хянах хэсэг';
+const SUPABASE_URL="https://djzkhvkpmhgxoykeozt.supabase.co";
+const SUPABASE_KEY="sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+async function login(){
+const email=document.getElementById("email").value;
+const password=document.getElementById("password").value;
+const m=document.getElementById("message");
+m.textContent="Нэвтэрч байна...";
+const {data,error}=await db.auth.signInWithPassword({email,password});
+if(error){m.textContent="Алдаа: "+error.message;return;}
+document.getElementById("login").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("user").textContent=data.user.email;
+showReports();
 }
+
+async function logout(){
+await db.auth.signOut();
+location.reload();
+}
+
+async function resetPassword(){
+const email=document.getElementById("email").value;
+if(!email){alert("И-мэйлээ оруулна уу");return;}
+const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin});
+alert(error?error.message:"Нууц үг сэргээх холбоос и-мэйлээр илгээгдлээ.");
+}
+
+function showReports(){
+document.getElementById("content").innerHTML=`
+<div class="item">
+<h2>Тайлан бүртгэх</h2>
+<label>Тайлангийн төрөл</label>
+<select id="type">
+<option value="SM1">СМ-1</option>
+<option value="quarterly">Улирлын тайлан</option>
+<option value="half_year">Хагас жилийн тайлан</option>
+<option value="annual">Жилийн тайлан</option>
+<option value="training_material">Сургалтын материал</option>
+<option value="incoming_letter">Ирсэн албан бичиг</option>
+<option value="evidence">Нотлох баримт</option>
+</select>
+<input id="year" type="number" value="${new Date().getFullYear()}" placeholder="Он">
+<input id="month" type="number" min="1" max="12" placeholder="Сар">
+<input id="title" placeholder="Тайлангийн нэр">
+<textarea id="description" placeholder="Тайлбар"></textarea>
+<button onclick="saveReport()">Тайлан хадгалах</button>
+<p id="saveMessage"></p>
+</div>
+<div class="item">
+<h2>Тайлангийн жагсаалт</h2>
+<button class="secondary" onclick="loadReports()">Шинэчлэх</button>
+<div id="reports"></div>
+</div>`;
+loadReports();
+}
+
+async function saveReport(){
+const {data:{user}}=await db.auth.getUser();
+const title=document.getElementById("title").value;
+if(!title){alert("Тайлангийн нэр оруулна уу");return;}
+const month=document.getElementById("month").value;
+const record={
+report_type:document.getElementById("type").value,
+report_year:Number(document.getElementById("year").value),
+report_month:month?Number(month):null,
+title:title,
+description:document.getElementById("description").value,
+created_by:user.id,
+status:"draft"
+};
+const {error}=await db.from("reports").insert(record);
+document.getElementById("saveMessage").textContent=error?"Алдаа: "+error.message:"Тайлан хадгалагдлаа!";
+if(!error)loadReports();
+}
+
+async function loadReports(){
+const box=document.getElementById("reports");
+box.textContent="Уншиж байна...";
+const {data,error}=await db.from("reports")
+.select("title,report_type,report_year,report_month,status")
+.order("created_at",{ascending:false});
+if(error){box.textContent="Алдаа: "+error.message;return;}
+if(!data.length){box.textContent="Тайлан байхгүй.";return;}
+box.innerHTML=data.map(r=>`
+<div class="item">
+<strong>${escapeHtml(r.title)}</strong>
+<small>${escapeHtml(r.report_type)} | ${r.report_year} | ${r.report_month||""}</small>
+<p>${escapeHtml(r.status||"")}</p>
+</div>`).join("");
+}
+
+function showTrainings(){
+document.getElementById("content").innerHTML=`
+<div class="item">
+<h2>Сургалтын хэсэг</h2>
+<p>Сургалтын бүртгэлийн хүснэгтийн баганын тохиргоог баталгаажуулсны дараа хадгалалт холбоно.</p>
+</div>`;
+}
+
+function showInfo(){
+document.getElementById("content").innerHTML=`
+<div class="item">
+<h2>Системийн мэдээлэл</h2>
+<p>Гамшгаас хамгаалах сургалтын нэгдсэн систем.</p>
+<p>Тайлангийн мэдээлэл Supabase мэдээллийн санд хадгалагдана.</p>
+</div>`;
+}
+
+function escapeHtml(s){
+return String(s||"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+db.auth.getSession().then(({data})=>{
+if(data.session){
+document.getElementById("login").classList.add("hidden");
+document.getElementById("dashboard").classList.remove("hidden");
+document.getElementById("user").textContent=data.session.user.email;
+showReports();
+}
+});
 </script>
 </body>
 </html>
