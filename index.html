@@ -1,4 +1,309 @@
 
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Гамшгаас хамгаалах сургалтын систем</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#eef2f7;
+ color:#1e293b;
+ font-family:Arial,sans-serif;
+ padding:15px;
+}
+.container{max-width:900px;margin:auto}
+.card{
+ background:white;
+ border-radius:16px;
+ padding:22px;
+ margin-bottom:18px;
+ border:1px solid #dbe1e8;
+ box-shadow:0 3px 12px #00000008;
+}
+h1{font-size:25px;color:#174b7c}
+h2{font-size:21px}
+label{
+ display:block;
+ font-weight:bold;
+ margin:15px 0 7px;
+}
+input,select,textarea{
+ width:100%;
+ padding:14px;
+ border:1px solid #cbd5e1;
+ border-radius:10px;
+ font-size:16px;
+ background:white;
+}
+textarea{min-height:110px}
+button{
+ border:0;
+ border-radius:10px;
+ padding:13px 18px;
+ font-size:16px;
+ font-weight:bold;
+ cursor:pointer;
+}
+.primary{background:#1769a6;color:white}
+.secondary{background:#e5eef8;color:#174675}
+.danger{background:#fee2e2;color:#991b1b}
+.small{padding:9px 12px;font-size:14px}
+.hidden{display:none!important}
+.item{
+ border:1px solid #dbe1e8;
+ border-radius:12px;
+ padding:16px;
+ margin:12px 0;
+}
+.actions{
+ display:flex;
+ gap:9px;
+ flex-wrap:wrap;
+ margin-top:12px;
+}
+.status{color:#64748b;font-size:14px}
+.message{margin-top:15px;font-weight:bold}
+.header{
+ background:#174b7c;
+ color:white;
+ padding:20px;
+ border-radius:14px;
+ margin-bottom:18px;
+}
+.header h1{color:white;margin:0}
+.header p{margin-bottom:0}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- НЭВТРЭХ -->
+<div class="card" id="loginCard">
+<h1>🛡️ Гамшгаас хамгаалах сургалтын систем</h1>
+<h2>Нэвтрэх</h2>
+
+<label>И-мэйл</label>
+<input id="email" type="email" placeholder="И-мэйл">
+
+<label>Нууц үг</label>
+<input id="password" type="password" placeholder="Нууц үг">
+
+<button class="primary" style="width:100%;margin-top:18px"
+onclick="login()">Нэвтрэх</button>
+
+<div id="loginMessage" class="message"></div>
+</div>
+
+<!-- СИСТЕМ -->
+<div id="app" class="hidden">
+
+<div class="header">
+<h1>Гамшгаас хамгаалах тайлан</h1>
+<p id="userInfo"></p>
+<br>
+<button class="secondary small" onclick="logout()">Гарах</button>
+</div>
+
+<!-- ТАЙЛАН БҮРТГЭХ -->
+<div class="card">
+<h2 id="formTitle">Тайлан бүртгэх</h2>
+
+<form id="reportForm" onsubmit="saveReport(event)">
+
+<label>Аймаг / Нийслэл</label>
+<select id="province" required onchange="loadUnits()">
+<option value="">Аймаг сонгох</option>
+</select>
+
+<label>Сум / Дүүрэг</label>
+<select id="unit" required>
+<option value="">Сум / дүүрэг сонгох</option>
+</select>
+
+<label>Тайлангийн төрөл</label>
+<select id="type" required>
+<option value="SM1">СМ-1</option>
+</select>
+
+<label>Тайлант хугацаа</label>
+<select id="period" required onchange="changePeriod()">
+<option value="Сарын">Сарын</option>
+<option value="Улирлын">Улирлын</option>
+<option value="Хагас жилийн">Хагас жилийн</option>
+<option value="Бүтэн жилийн">Бүтэн жилийн</option>
+</select>
+
+<label>Тайлангийн он</label>
+<input id="year" type="number" value="2026" required>
+
+<div id="monthBox">
+<label>Сар</label>
+<select id="month">
+<option value="">Сар сонгох</option>
+<option value="1">1 сар</option>
+<option value="2">2 сар</option>
+<option value="3">3 сар</option>
+<option value="4">4 сар</option>
+<option value="5">5 сар</option>
+<option value="6">6 сар</option>
+<option value="7">7 сар</option>
+<option value="8">8 сар</option>
+<option value="9">9 сар</option>
+<option value="10">10 сар</option>
+<option value="11">11 сар</option>
+<option value="12">12 сар</option>
+</select>
+</div>
+
+<div id="quarterBox" class="hidden">
+<label>Улирал</label>
+<select id="quarter">
+<option value="1">I улирал</option>
+<option value="2">II улирал</option>
+<option value="3">III улирал</option>
+<option value="4">IV улирал</option>
+</select>
+</div>
+
+<div id="halfBox" class="hidden">
+<label>Хагас жил</label>
+<select id="half">
+<option value="1">I хагас жил</option>
+<option value="2">II хагас жил</option>
+</select>
+</div>
+
+<label>Тайлангийн нэр</label>
+<input id="title" required placeholder="Тайлангийн нэр">
+
+<label>Тайлбар</label>
+<textarea id="description" placeholder="Тайлбар"></textarea>
+
+<div class="actions">
+<button class="primary" id="saveButton" type="submit">
+💾 Тайлан хадгалах
+</button>
+
+<button class="secondary hidden" id="cancelButton"
+type="button" onclick="cancelEdit()">Болих</button>
+</div>
+
+<div id="message" class="message"></div>
+</form>
+</div>
+
+<!-- ТАЙЛАНГИЙН ЖАГСААЛТ -->
+<div class="card">
+<h2>Тайлангийн жагсаалт</h2>
+<button class="secondary" onclick="loadReports()">🔄 Шинэчлэх</button>
+<div id="reportList">Ачаалж байна...</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://djzlkhvkpmhgxoykeozt.supabase.co";
+const SUPABASE_KEY="sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d";
+
+const db=window.supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_KEY
+);
+
+let currentUser=null;
+let editingId=null;
+let unitsData=[];
+
+// =========================
+// НЭВТРЭХ
+// =========================
+async function login(){
+
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const msg=document.getElementById("loginMessage");
+
+msg.textContent="Нэвтэрч байна...";
+
+const {data,error}=await db.auth.signInWithPassword({
+ email,password
+});
+
+if(error){
+ msg.textContent="Алдаа: "+error.message;
+ return;
+}
+
+currentUser=data.user;
+await showApp();
+}
+
+// =========================
+// СИСТЕМ НЭЭХ
+// =========================
+async function showApp(){
+
+document.getElementById("loginCard").classList.add("hidden");
+document.getElementById("app").classList.remove("hidden");
+
+document.getElementById("userInfo").textContent=
+ "Нэвтэрсэн: "+currentUser.email;
+
+await loadProvinces();
+await loadReports();
+}
+
+// =========================
+// ГАРАХ
+// =========================
+async function logout(){
+
+await db.auth.signOut();
+
+currentUser=null;
+editingId=null;
+
+document.getElementById("app").classList.add("hidden");
+document.getElementById("loginCard").classList.remove("hidden");
+}
+
+// =========================
+// АЙМАГ АЧААЛАХ
+// =========================
+async function loadProvinces(){
+
+const select=document.getElementById("province");
+
+select.innerHTML='<option value="">Аймаг сонгох</option>';
+
+const {data,error}=await db.from("provinces")
+.select("id,name")
+.order("id");
+
+if(error){
+ alert("Аймаг ачаалах алдаа: "+error.message);
+ return;
+}
+
+data.forEach(p=>{
+ const option=document.createElement("option");
+ option.value=p.id;
+ option.textContent=p.name;
+ select.appendChild(option);
+});
+}
+
+// =========================
+// СУМ / ДҮҮРЭГ АЧААЛАХ
+// =========================
 async function loadUnits(){
 
 const provinceId=document.getElementById("province").value;
@@ -8,22 +313,314 @@ unit.innerHTML='<option value="">Сум / дүүрэг сонгох</option>';
 
 if(!provinceId)return;
 
-const {data,error}=await db
-.from("units")
+const {data,error}=await db.from("units")
 .select("id,name")
 .eq("province_id",provinceId)
 .order("name");
 
 if(error){
-alert("Сум татах алдаа: "+error.message);
-return;
+ alert("Сум / дүүрэг ачаалах алдаа: "+error.message);
+ return;
 }
 
-(data||[]).forEach(u=>{
-const option=document.createElement("option");
-option.value=u.id;
-option.textContent=u.name;
-unit.appendChild(option);
+unitsData=data||[];
+
+unitsData.forEach(u=>{
+ const option=document.createElement("option");
+ option.value=u.id;
+ option.textContent=u.name;
+ unit.appendChild(option);
 });
-
 }
+
+// =========================
+// ХУГАЦАА СОНГОХ
+// =========================
+function changePeriod(){
+
+const period=document.getElementById("period").value;
+
+document.getElementById("monthBox").classList.toggle(
+ "hidden",period!=="Сарын"
+);
+
+document.getElementById("quarterBox").classList.toggle(
+ "hidden",period!=="Улирлын"
+);
+
+document.getElementById("halfBox").classList.toggle(
+ "hidden",period!=="Хагас жилийн"
+);
+}
+
+// =========================
+// ХУГАЦААНЫ НЭМЭЛТ
+// =========================
+function getPeriodText(){
+
+const period=document.getElementById("period").value;
+
+if(period==="Сарын"){
+ return period+" "+document.getElementById("month").value+" сар";
+}
+
+if(period==="Улирлын"){
+ return period+" "+document.getElementById("quarter").value+"-р улирал";
+}
+
+if(period==="Хагас жилийн"){
+ return period+" "+document.getElementById("half").value+"-р хагас";
+}
+
+return "Бүтэн жилийн";
+}
+
+// =========================
+// ТАЙЛАН ХАДГАЛАХ
+// =========================
+async function saveReport(event){
+
+event.preventDefault();
+
+if(!currentUser){
+ alert("Нэвтэрнэ үү");
+ return;
+}
+
+const provinceId=document.getElementById("province").value;
+const unitId=document.getElementById("unit").value;
+const provinceName=document.getElementById("province")
+.options[document.getElementById("province").selectedIndex].text;
+const unitName=document.getElementById("unit")
+.options[document.getElementById("unit").selectedIndex].text;
+
+const period=document.getElementById("period").value;
+const year=Number(document.getElementById("year").value);
+const month=document.getElementById("month").value;
+const title=document.getElementById("title").value.trim();
+const description=document.getElementById("description").value;
+
+if(!provinceId||!unitId){
+ alert("Аймаг болон сум / дүүрэг сонгоно уу");
+ return;
+}
+
+if(!title){
+ alert("Тайлангийн нэр оруулна уу");
+ return;
+}
+
+if(period==="Сарын"&&!month){
+ alert("Сар сонгоно уу");
+ return;
+}
+
+const msg=document.getElementById("message");
+msg.textContent="Хадгалж байна...";
+
+const record={
+ province_id:Number(provinceId),
+ report_type:"SM1",
+ report_year:year,
+ report_month:period==="Сарын"?Number(month):null,
+ title:title,
+ description:
+ "Аймаг: "+provinceName+
+ "\nСум / дүүрэг: "+unitName+
+ "\nТайлант хугацаа: "+getPeriodText()+
+ "\n"+description,
+ created_by:currentUser.id
+};
+
+let result;
+
+if(editingId){
+
+result=await db.from("reports")
+.update(record)
+.eq("id",editingId)
+.eq("created_by",currentUser.id);
+
+}else{
+
+record.status="draft";
+
+result=await db.from("reports").insert(record);
+}
+
+if(result.error){
+ msg.textContent="Алдаа: "+result.error.message;
+ return;
+}
+
+msg.textContent=editingId?
+ "Өөрчлөлт амжилттай хадгалагдлаа!":
+ "Тайлан амжилттай хадгалагдлаа!";
+
+cancelEdit();
+await loadReports();
+}
+
+// =========================
+// ТАЙЛАНГИЙН ЖАГСААЛТ
+// =========================
+async function loadReports(){
+
+if(!currentUser)return;
+
+const list=document.getElementById("reportList");
+list.innerHTML="Ачаалж байна...";
+
+const {data,error}=await db.from("reports")
+.select("*")
+.eq("created_by",currentUser.id)
+.order("created_at",{ascending:false});
+
+if(error){
+ list.textContent="Алдаа: "+error.message;
+ return;
+}
+
+if(!data||data.length===0){
+ list.innerHTML="<p>Тайлан бүртгэгдээгүй байна.</p>";
+ return;
+}
+
+list.innerHTML="";
+
+data.forEach(report=>{
+
+const item=document.createElement("div");
+item.className="item";
+
+const name=document.createElement("h3");
+name.textContent=report.title;
+
+const info=document.createElement("p");
+info.textContent=
+ "СМ-1 | "+report.report_year+
+ " | "+(report.report_month?
+ report.report_month+" сар":"");
+
+const desc=document.createElement("p");
+desc.style.whiteSpace="pre-line";
+desc.textContent=report.description||"";
+
+const status=document.createElement("p");
+status.className="status";
+status.textContent="Төлөв: "+(report.status||"draft");
+
+const actions=document.createElement("div");
+actions.className="actions";
+
+const editBtn=document.createElement("button");
+editBtn.className="secondary small";
+editBtn.textContent="✏️ Засварлах";
+editBtn.onclick=()=>editReport(report);
+
+const deleteBtn=document.createElement("button");
+deleteBtn.className="danger small";
+deleteBtn.textContent="🗑 Устгах";
+deleteBtn.onclick=()=>deleteReport(report.id);
+
+actions.append(editBtn,deleteBtn);
+item.append(name,info,desc,status,actions);
+list.appendChild(item);
+
+});
+}
+
+// =========================
+// ЗАСВАРЛАХ
+// =========================
+function editReport(report){
+
+editingId=report.id;
+
+document.getElementById("type").value="SM1";
+document.getElementById("year").value=report.report_year||2026;
+document.getElementById("title").value=report.title||"";
+
+let desc=report.description||"";
+let period="Сарын";
+
+const match=desc.match(/Тайлант хугацаа: (.*?)\n/);
+
+if(match){
+ period=match[1].split(" ")[0];
+ desc=desc.replace(match[0],"");
+}
+
+document.getElementById("period").value=
+ ["Сарын","Улирлын","Хагас жилийн","Бүтэн жилийн"].includes(period)
+ ?period:"Сарын";
+
+document.getElementById("description").value=desc;
+
+document.getElementById("formTitle").textContent="Тайлан засварлах";
+document.getElementById("saveButton").textContent="Өөрчлөлт хадгалах";
+document.getElementById("cancelButton").classList.remove("hidden");
+
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+// =========================
+// ЗАСВАР БОЛИХ
+// =========================
+function cancelEdit(){
+
+editingId=null;
+
+document.getElementById("reportForm").reset();
+document.getElementById("year").value=2026;
+
+document.getElementById("formTitle").textContent="Тайлан бүртгэх";
+document.getElementById("saveButton").textContent="💾 Тайлан хадгалах";
+document.getElementById("cancelButton").classList.add("hidden");
+document.getElementById("message").textContent="";
+
+document.getElementById("unit").innerHTML=
+ '<option value="">Сум / дүүрэг сонгох</option>';
+
+changePeriod();
+}
+
+// =========================
+// УСТГАХ
+// =========================
+async function deleteReport(id){
+
+if(!confirm("Энэ тайланг устгах уу?"))return;
+
+const {error}=await db.from("reports")
+.delete()
+.eq("id",id)
+.eq("created_by",currentUser.id);
+
+if(error){
+ alert("Устгах алдаа: "+error.message);
+ return;
+}
+
+alert("Тайлан устгагдлаа.");
+await loadReports();
+}
+
+// =========================
+// АВТО НЭВТРЭЛТ
+// =========================
+async function init(){
+
+const {data}=await db.auth.getSession();
+
+if(data.session){
+ currentUser=data.session.user;
+ await showApp();
+}
+}
+
+changePeriod();
+init();
+</script>
+</body>
+</html>
