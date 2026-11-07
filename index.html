@@ -1,1 +1,61 @@
-
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Гамшгаас хамгаалах сургалтын систем</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#1e293b}
+header{background:#17365d;color:white;padding:22px;text-align:center}
+main{max-width:900px;margin:25px auto;padding:15px}
+.card{background:white;padding:22px;border-radius:12px;margin-bottom:18px;box-shadow:0 3px 12px #0001}
+h1{font-size:22px}h2{font-size:19px;color:#17365d}
+input,select,textarea,button{width:100%;padding:12px;margin:8px 0;box-sizing:border-box;border-radius:7px;border:1px solid #cbd5e1;font-size:16px}
+button{background:#17365d;color:white;border:0;font-weight:bold}
+button:hover{background:#244d80}
+nav{display:flex;gap:8px;flex-wrap:wrap}
+nav button{width:auto;flex:1}
+small{color:#64748b}
+</style>
+</head>
+<body>
+<header>
+<h1>ГАМШГААС ХАМГААЛАХ СУРГАЛТЫН НЭГДСЭН СИСТЕМ</h1>
+<p>Тайлан • Сургалт • Хяналт</p>
+</header>
+<main>
+<div class="card">
+<h2>Системд нэвтрэх</h2>
+<input type="email" placeholder="И-мэйл хаяг">
+<input type="password" placeholder="Нууц үг">
+<button onclick="alert('Supabase холбосны дараа нэвтрэлт ажиллана')">Нэвтрэх</button>
+<small>Нэвтрэлт Supabase-тай холбосны дараа ажиллана.</small>
+</div>
+<div class="card">
+<h2>Системийн үндсэн хэсгүүд</h2>
+<nav>
+<button onclick="show('Тайлан')">Тайлан</button>
+<button onclick="show('Сургалт')">Сургалт</button>
+<button onclick="show('Хяналт')">Хяналт</button>
+</nav>
+<div id="content">Хэсгээ сонгоно уу.</div>
+</div>
+<div class="card">
+<h2>Тайлангийн бүртгэл</h2>
+<input placeholder="Аймаг / Дүүрэг">
+<select><option>Тайлангийн төрөл</option><option>SM-1 сарын тайлан</option><option>Улирлын тайлан</option><option>Хагас жилийн тайлан</option><option>Жилийн тайлан</option></select>
+<input type="number" placeholder="Тайлангийн он">
+<input type="number" placeholder="Сар">
+<input placeholder="Тайлангийн нэр">
+<textarea placeholder="Тайлбар"></textarea>
+<button onclick="alert('Supabase холбосны дараа тайлан хадгалагдана')">Тайлан бүртгэх</button>
+</div>
+</main>
+<script>
+function show(x){
+document.getElementById('content').innerHTML=
+x==='Тайлан'?'Тайлангийн жагсаалт':x==='Сургалт'?'Сургалтын бүртгэл':'Тайлан хянах хэсэг';
+}
+</script>
+</body>
+</html>
