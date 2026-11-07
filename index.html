@@ -41,6 +41,14 @@ small{color:#64748b}
 <small>Supabase Auth-д бүртгэлтэй хэрэглэгч нэвтэрнэ.</small>
 </div>
 
+<div class="card hidden" id="recovery">
+<h2>Шинэ нууц үг тохируулах</h2>
+<input id="newPassword" type="password" placeholder="Шинэ нууц үг (8-аас дээш тэмдэгт)">
+<input id="confirmPassword" type="password" placeholder="Шинэ нууц үгээ давтах">
+<button onclick="changePassword()">Нууц үг хадгалах</button>
+<p id="recoveryMessage"></p>
+</div>
+
 <div class="card hidden" id="dashboard">
 <h2>Системийн үндсэн хэсэг</h2>
 <p id="user"></p>
@@ -57,9 +65,16 @@ small{color:#64748b}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL="https://djzkhvkpmhgxoykeozt.supabase.co";
-  sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d
+const SUPABASE_URL="https://djzlkhvkpmhgxoykeozt.supabase.co";
+const SUPABASE_KEY="sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d";
+
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+function showRecovery(){
+document.getElementById("login").classList.add("hidden");
+document.getElementById("dashboard").classList.add("hidden");
+document.getElementById("recovery").classList.remove("hidden");
+}
 
 async function login(){
 const email=document.getElementById("email").value;
@@ -82,8 +97,28 @@ location.reload();
 async function resetPassword(){
 const email=document.getElementById("email").value;
 if(!email){alert("И-мэйлээ оруулна уу");return;}
-const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin});
+const {error}=await db.auth.resetPasswordForEmail(email,{
+redirectTo:location.origin
+});
 alert(error?error.message:"Нууц үг сэргээх холбоос и-мэйлээр илгээгдлээ.");
+}
+
+async function changePassword(){
+const p=document.getElementById("newPassword").value;
+const c=document.getElementById("confirmPassword").value;
+const m=document.getElementById("recoveryMessage");
+
+if(p.length<8){m.textContent="Нууц үг 8-аас дээш тэмдэгт байх ёстой.";return;}
+if(p!==c){m.textContent="Нууц үг хоорондоо таарахгүй байна.";return;}
+
+m.textContent="Хадгалж байна...";
+const {error}=await db.auth.updateUser({password:p});
+
+if(error){m.textContent="Алдаа: "+error.message;return;}
+
+m.textContent="Нууц үг амжилттай солигдлоо!";
+document.getElementById("recovery").classList.add("hidden");
+document.getElementById("login").classList.remove("hidden");
 }
 
 function showReports(){
@@ -172,6 +207,12 @@ return String(s||"").replace(/[&<>"']/g,c=>({
 "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
 }[c]));
 }
+
+db.auth.onAuthStateChange((event,session)=>{
+if(event==="PASSWORD_RECOVERY"){
+showRecovery();
+}
+});
 
 db.auth.getSession().then(({data})=>{
 if(data.session){
