@@ -556,6 +556,16 @@ message("adminStatus","Бүртгэл үүсгэж байна...");
 
 try{
 const {data,error}=await sb.functions.invoke("super-handler",{body:{}});
+if(error){
+  let detail="";
+  try{
+    detail=await error.context.text();
+  }catch(e){
+    detail=error.message;
+  }
+  throw new Error(detail);
+}
+if(data.error)throw Error(JSON.stringify(data));
 
 if(error)throw error;
 if(data.error)throw Error(data.error);
