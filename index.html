@@ -1,106 +1,137 @@
 
-const institutions = [
-  { username: "arkhangai", email: "arkhangai@example.com", password: "CHANGE_ME_01", province_id: 1, role: "province" },
-  { username: "bayanulgii", email: "bayanulgii@example.com", password: "CHANGE_ME_02", province_id: 2, role: "province" },
-  { username: "bayankhongor", email: "bayankhongor@example.com", password: "CHANGE_ME_03", province_id: 3, role: "province" },
-  { username: "bulgan", email: "bulgan@example.com", password: "CHANGE_ME_04", province_id: 4, role: "province" },
-  { username: "gobialtai", email: "gobialtai@example.com", password: "CHANGE_ME_05", province_id: 5, role: "province" },
-  { username: "gobisumber", email: "gobisumber@example.com", password: "CHANGE_ME_06", province_id: 6, role: "province" },
-  { username: "darkhan", email: "darkhan@example.com", password: "CHANGE_ME_07", province_id: 7, role: "province" },
-  { username: "dornogovi", email: "dornogovi@example.com", password: "CHANGE_ME_08", province_id: 8, role: "province" },
-  { username: "dornod", email: "dornod@example.com", password: "CHANGE_ME_09", province_id: 9, role: "province" },
-  { username: "dundgovi", email: "dundgovi@example.com", password: "CHANGE_ME_10", province_id: 10, role: "province" },
-  { username: "zavkhan", email: "zavkhan@example.com", password: "CHANGE_ME_11", province_id: 11, role: "province" },
-  { username: "orkhon", email: "orkhon@example.com", password: "CHANGE_ME_12", province_id: 12, role: "province" },
-  { username: "uvurkhangai", email: "uvurkhangai@example.com", password: "CHANGE_ME_13", province_id: 13, role: "province" },
-  { username: "umnugovi", email: "umnugovi@example.com", password: "CHANGE_ME_14", province_id: 14, role: "province" },
-  { username: "sukhbaatar", email: "sukhbaatar@example.com", password: "CHANGE_ME_15", province_id: 15, role: "province" },
-  { username: "selenge", email: "selenge@example.com", password: "CHANGE_ME_16", province_id: 16, role: "province" },
-  { username: "tuv", email: "tuv@example.com", password: "CHANGE_ME_17", province_id: 17, role: "province" },
-  { username: "uvs", email: "uvs@example.com", password: "CHANGE_ME_18", province_id: 18, role: "province" },
-  { username: "khovd", email: "khovd@example.com", password: "CHANGE_ME_19", province_id: 19, role: "province" },
-  { username: "khuvsgul", email: "khuvsgul@example.com", password: "CHANGE_ME_20", province_id: 20, role: "province" },
-  { username: "khentii", email: "khentii@example.com", password: "CHANGE_ME_21", province_id: 21, role: "province" }
-];
-
-// Дүүргүүдийн unit_id-г бодит ID-аар нөхнө
-const districts = [
-  "baganuur", "bagakhangai", "bayangol",
-  "bayanzurkh", "nalaih", "songinokhairkhan",
-  "sukhbaatar_duureg", "khanuul", "chingeltei"
-];
-
-// Функц руу хүсэлт илгээх
-const { data: sessionData } = await supabase.auth.getSession();
-
-const response = await fetch(
-  `${SUPABASE_URL}/functions/v1/super-handler`,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${sessionData.session.access_token}`
-  
-<!-- 30 байгууллага бүртгэх админ товч -->
-<div id="admin-create-box" style="display:none; padding:20px;">
+<!-- АДМИН: 30 БАЙГУУЛЛАГА ҮҮСГЭХ -->
+<section id="admin-create-box" style="display:none;padding:20px;margin:20px 0;border:1px solid #ddd;border-radius:12px;">
   <h3>Байгууллагын хэрэглэгч бүртгэх</h3>
+
+  <p>21 аймаг + 9 дүүргийн хэрэглэгч үүсгэнэ.</p>
+
   <button id="createInstitutionsBtn"
-    style="background:#2563eb;color:white;padding:12px 20px;border:0;border-radius:8px;">
+    style="background:#2563eb;color:white;padding:12px 20px;border:0;border-radius:8px;font-size:16px;">
     30 байгууллага үүсгэх
   </button>
+
+  <button id="downloadInstitutionsBtn"
+    style="display:none;background:#16a34a;color:white;padding:12px 20px;border:0;border-radius:8px;margin-top:10px;">
+    Үр дүн татах
+  </button>
+
   <pre id="createInstitutionsResult"
-    style="white-space:pre-wrap;overflow-wrap:anywhere;"></pre>
-</div>
+    style="white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:15px;"></pre>
+</section>
 
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
-  const box = document.getElementById("admin-create-box");
-  const btn = document.getElementById("createInstitutionsBtn");
-  const result = document.getElementById("createInstitutionsResult");
+(() => {
+  const initAdminInstitutionButton = async () => {
+    const box = document.getElementById("admin-create-box");
+    const btn = document.getElementById("createInstitutionsBtn");
+    const result = document.getElementById("createInstitutionsResult");
+    const downloadBtn = document.getElementById("downloadInstitutionsBtn");
 
-  // Зөвхөн админд харагдана
-  const { data: sessionData } = await supabase.auth.getSession();
+    if (!box || !btn || !result || !downloadBtn) return;
 
-  if (!sessionData.session) return;
+    // Supabase клиент байгаа эсэх
+    if (typeof supabase === "undefined") {
+      result.textContent = "Supabase клиент олдсонгүй.";
+      return;
+    }
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("role")
-    .eq("user_id", sessionData.session.user.id)
-    .single();
+    // Админ нэвтэрсэн эсэх
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
 
-  if (profile?.role !== "admin") return;
+    if (sessionError || !sessionData.session) return;
 
-  box.style.display = "block";
+    // Админ эрх шалгах
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("user_id", sessionData.session.user.id)
+      .single();
 
-  btn.addEventListener("click", async () => {
-    if (!confirm("30 байгууллагын хэрэглэгч үүсгэх үү?")) return;
+    if (profileError || profile?.role !== "admin") return;
 
-    btn.disabled = true;
-    result.textContent = "Бүртгэл үүсгэж байна...";
+    box.style.display = "block";
 
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "super-handler",
-        { body: {} }
+    let savedResult = null;
+
+    // Үр дүнг CSV файлаар татах
+    downloadBtn.onclick = () => {
+      if (!savedResult?.results) return;
+
+      const rows = [
+        ["Байгууллага", "Email", "Password", "Status", "Error"],
+        ...savedResult.results.map(x => [
+          x.name || "",
+          x.email || "",
+          x.password || "",
+          x.status || "",
+          x.error || ""
+        ])
+      ];
+
+      const csv = rows.map(row =>
+        row.map(value =>
+          '"' + String(value).replace(/"/g, '""') + '"'
+        ).join(",")
+      ).join("\r\n");
+
+      const blob = new Blob(["\uFEFF" + csv], {
+        type: "text/csv;charset=utf-8;"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "30-baiguullaga-hereglegch.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // 30 хэрэглэгч үүсгэх
+    btn.onclick = async () => {
+      const ok = confirm(
+        "21 аймаг + 9 дүүргийн хэрэглэгч үүсгэх үү?"
       );
 
-      if (error) throw error;
+      if (!ok) return;
 
-      result.textContent = JSON.stringify(data, null, 2);
-    } catch (e) {
-      result.textContent = "Алдаа: " + e.message;
-    } finally {
-      btn.disabled = false;
-    }
-  });
-});
-</script>
-  },
-    body: JSON.stringify({ institutions })
+      btn.disabled = true;
+      downloadBtn.style.display = "none";
+      result.textContent = "Бүртгэл үүсгэж байна...";
+
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          "super-handler",
+          { body: {} }
+        );
+
+        if (error) throw error;
+
+        savedResult = data;
+
+        result.textContent = JSON.stringify(data, null, 2);
+
+        if (data.results?.length) {
+          downloadBtn.style.display = "inline-block";
+        }
+
+      } catch (error) {
+        result.textContent =
+          "Алдаа гарлаа:\n" + (error.message || String(error));
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initAdminInstitutionButton,
+      { once: true }
+    );
+  } else {
+    initAdminInstitutionButton();
   }
-);
-
-const result = await response.json();
-console.log(result);
+})();
+</script>
