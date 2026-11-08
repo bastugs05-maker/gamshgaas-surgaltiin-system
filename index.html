@@ -160,6 +160,15 @@ button{width:100%}
 <div id="formStatus" class="message"></div>
 </div>
 
+<section id="reviewBox" class="card hidden">
+<h2>Ерөнхий газар — Тайлан хянах</h2>
+<p>Илгээсэн тайланг шалгаж, буцаах эсвэл баталгаажуулна.</p>
+<label>Хяналтын тайлбар</label><textarea id="reviewComment" placeholder="Буцаах шалтгаан / хяналтын тэмдэглэл"></textarea>
+<button id="reviewRefresh" class="secondary">Ирсэн тайлан шинэчлэх</button>
+<div id="reviewStatus" class="message"></div>
+<div class="table-wrap"><table><thead><tr><th>Аймаг/сум</th><th>Төрөл</th><th>Хугацаа</th><th>Гарчиг</th><th>Файл</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead><tbody id="reviewTable"></tbody></table></div>
+</section>
+
 <section class="card">
 <h2>Сургалтын баталгааны бүртгэл</h2>
 <div class="grid">
@@ -292,6 +301,7 @@ if(!data)throw Error("Хэрэглэгчийн profile олдсонгүй.");
 profile=data;
 
 $("adminBox").classList.toggle("hidden",profile.role!=="admin");
+$("reviewBox").classList.toggle("hidden",!(["admin","reviewer"].includes(profile.role)));
 
 initYears();
 await loadProvinces();
@@ -710,6 +720,34 @@ async function loadStatistics(){
  message("statStatus","Баталгаажсан сургалтын дүн.","success");
 }
 
+async function loadReviewQueue(){
+ const {data,error}=await sb.from("reports").select("*").in("review_status",["Илгээсэн","Хянаж байна","Засварласан"]).order("submitted_at",{ascending:true});
+ if(error){message("reviewStatus",error.message,"error");return;}
+ const rows=data||[];
+ $("reviewTable").innerHTML="";
+ for(const r of rows){
+  const tr=document.createElement("tr");
+  const [p,u]=await Promise.all([
+   sb.from("provinces").select("name").eq("id",r.province_id).maybeSingle(),
+   sb.from("units").select("name").eq("id",r.unit_id).maybeSingle()
+  ]);
+  [((p.data?.name)||"")+" / "+((u.data?.name)||""),r.report_type,periodText(r),r.title,r.report_file?"Хавсаргасан":"—",r.review_status].forEach(v=>{let td=document.createElement("td");td.textContent=v||"";tr.appendChild(td);});
+  const td=document.createElement("td");
+  if(r.report_file){const b=document.createElement("button");b.textContent="Файл";b.onclick=async()=>{const z=await sb.storage.from("training-files").createSignedUrl(r.report_file,300);if(z.error)alert(z.error.message);else window.open(z.data.signedUrl,"_blank");};td.appendChild(b);}
+  [["Баталгаажуулах","Баталгаажсан","green"],["Буцаах","Буцаасан","danger"],["Хянаж байна","Хянаж байна","secondary"]].forEach(([label,status,cls])=>{const b=document.createElement("button");b.textContent=label;b.className=cls;b.onclick=()=>reviewReport(r.id,status);td.appendChild(b);});
+  tr.appendChild(td);$("reviewTable").appendChild(tr);
+ }
+ message("reviewStatus",rows.length+" тайлан хяналтад байна.","success");
+}
+async function reviewReport(id,status){
+ const comment=$("reviewComment").value.trim();
+ if(status==="Буцаасан"&&!comment){alert("Буцаах шалтгаан бичнэ үү.");return;}
+ const {error}=await sb.from("reports").update({review_status:status,review_comment:comment,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()}).eq("id",id);
+ if(error){message("reviewStatus",error.message,"error");return;}
+ message("reviewStatus","Төлөв шинэчлэгдлээ.","success");
+ await loadReviewQueue();await loadReports();
+}
+
 // EVENT
 $("loginBtn").addEventListener("click",login);
 $("logoutBtn").addEventListener("click",logout);
@@ -721,6 +759,7 @@ $("refreshBtn").addEventListener("click",loadReports);
 $("createBtn").addEventListener("click",createInstitutions);
 $("downloadBtn").addEventListener("click",downloadCSV);
 $("trProvince").addEventListener("change",loadTrainingUnits);$("trSaveBtn").addEventListener("click",saveTraining);$("statRefresh").addEventListener("click",loadStatistics);
+$("reviewRefresh").addEventListener("click",loadReviewQueue);
 
 // ENTER ДАРАХАД НЭВТРЭХ
 $("password").addEventListener("keydown",e=>{
