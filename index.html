@@ -1,4 +1,253 @@
-e("loginStatus","Нэвтэрч байна...");
+
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Гамшгаас хамгаалах сургалтын систем</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
+header{background:#285b94;color:white;text-align:center;padding:25px}
+.container{max-width:1100px;margin:20px auto;padding:12px}
+.card{background:white;padding:20px;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 15px #0001}
+h2{color:#285b94}
+label{display:block;margin:12px 0 6px;font-weight:bold}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccd5df;border-radius:8px;font-size:16px}
+textarea{min-height:100px}
+button{padding:12px 18px;background:#285b94;color:white;border:0;border-radius:8px;margin-top:12px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.secondary{background:#64748b}
+.danger{background:#c0392b}
+.green{background:#16834a}
+.hidden{display:none!important}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.message{margin-top:10px;font-weight:bold;overflow-wrap:anywhere}
+.success{color:green}
+.error{color:red}
+.table-wrap{overflow:auto}
+table{width:100%;min-width:750px;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:10px;text-align:left}
+th{background:#285b94;color:white}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;padding:10px}
+@media(max-width:650px){
+.grid{grid-template-columns:1fr}
+.container{padding:8px}
+button{width:100%}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>ГАМШГААС ХАМГААЛАХ СУРГАЛТЫН СИСТЕМ</h1>
+<p>Тайлан бүртгэл, мэдээллийн нэгдсэн систем</p>
+</header>
+
+<div class="container">
+
+<section id="loginSection" class="card">
+<h2>Системд нэвтрэх</h2>
+<label>И-мэйл</label>
+<input id="email" type="email" autocomplete="username">
+<label>Нууц үг</label>
+<input id="password" type="password" autocomplete="current-password">
+<button id="loginBtn">Нэвтрэх</button>
+<div id="loginStatus" class="message"></div>
+</section>
+
+<section id="appSection" class="hidden">
+
+<div class="card toolbar">
+<h2>Үндсэн хэсэг</h2>
+<button id="logoutBtn" class="secondary">Гарах</button>
+<div id="userInfo"></div>
+</div>
+
+<section id="adminBox" class="card hidden">
+<h2>АДМИН — 30 байгууллага бүртгэх</h2>
+<p>21 аймаг + 9 дүүргийн хэрэглэгч үүсгэнэ.</p>
+<button id="createBtn">30 байгууллага үүсгэх</button>
+<button id="downloadBtn" class="green hidden">CSV татах</button>
+<div id="adminStatus" class="message"></div>
+<pre id="adminResult"></pre>
+</section>
+
+<div class="card">
+
+<h2 id="formTitle">Тайлан бүртгэх</h2>
+<input id="editId" type="hidden">
+
+<div class="grid">
+
+<div>
+<label>Аймаг / Нийслэл</label>
+<select id="province"></select>
+</div>
+
+<div>
+<label>Сум / Дүүрэг</label>
+<select id="unit"></select>
+</div>
+
+<div>
+<label>Тайлангийн төрөл</label>
+<select id="reportType">
+<option>SM1</option>
+<option>Сургалтын тайлан</option>
+<option>Мэдээлэл</option>
+<option>Бусад</option>
+</select>
+</div>
+
+<div>
+<label>Хугацаа</label>
+<select id="period">
+<option value="month">Сарын тайлан</option>
+<option value="quarter">Улирлын тайлан</option>
+<option value="half">Хагас жилийн тайлан</option>
+<option value="year">Жилийн тайлан</option>
+</select>
+</div>
+
+<div>
+<label>Он</label>
+<select id="reportYear"></select>
+</div>
+
+<div id="monthBox">
+<label>Сар</label>
+<select id="reportMonth"></select>
+</div>
+
+<div id="quarterBox" class="hidden">
+<label>Улирал</label>
+<select id="reportQuarter">
+<option value="1">I</option>
+<option value="2">II</option>
+<option value="3">III</option>
+<option value="4">IV</option>
+</select>
+</div>
+
+<div id="halfBox" class="hidden">
+<label>Хагас жил</label>
+<select id="reportHalf">
+<option value="1">I хагас</option>
+<option value="2">II хагас</option>
+</select>
+</div>
+
+</div>
+
+<label>Тайлангийн гарчиг</label>
+<input id="title">
+
+<label>Тайлбар / Агуулга</label>
+<textarea id="description"></textarea>
+<label>Тайлангийн файл (PDF, Word, Excel, JPG/PNG; 10MB хүртэл)</label>
+<input id="reportFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+<label>Илгээх төлөв</label>
+<select id="reportSubmitStatus"><option value="Ноорог">Ноорог хадгалах</option><option value="Илгээсэн">Хяналтад илгээх</option></select>
+
+<button id="saveBtn">Тайлан хадгалах</button>
+<button id="cancelBtn" class="secondary hidden">Болих</button>
+
+<div id="formStatus" class="message"></div>
+</div>
+
+<section class="card">
+<h2>Сургалтын баталгааны бүртгэл</h2>
+<div class="grid">
+<div><label>Сургалт зохион байгуулсан огноо</label><input id="trDate" type="date"></div>
+<div><label>Аймаг / Нийслэл</label><select id="trProvince"></select></div>
+<div><label>Сум / Дүүрэг</label><select id="trUnit"></select></div>
+<div><label>Сургалтын төрөл (14)</label><select id="trType"></select></div>
+<div><label>Байгууллагын төрөл</label><select id="trOrgType"><option>Төрийн байгууллага</option><option>Хувийн байгууллага</option><option>Төрийн бус байгууллага</option><option>Бусад</option></select></div>
+<div><label>Байгууллагын нэр</label><input id="trOrgName" placeholder="Жишээ: Зуунмод сумын сургууль"></div>
+<div><label>Нийт хамрагдсан</label><input id="trTotal" type="number" min="0" value="0"></div>
+<div><label>Эрэгтэй</label><input id="trMale" type="number" min="0" value="0"></div>
+<div><label>Эмэгтэй</label><input id="trFemale" type="number" min="0" value="0"></div>
+<div><label>Сургалтын хэлбэр</label><select id="trFormat"><option>Танхим</option><option>Цахим</option><option>Дадлага</option></select></div>
+<div><label>Сургалтын сэдэв</label><select id="trTopic"><option>Гал түймрийн аюулаас урьдчилан сэргийлэх</option><option>Газар хөдлөлт</option><option>Үер</option><option>Анхны тусламж</option><option>Гамшгийн үеийн бэлэн байдал</option><option>Бусад</option></select></div>
+</div>
+<label>Сэдэв (Бусад бол дэлгэрэнгүй)</label><input id="trTopicOther">
+<label>Баталгааны хуудас (PDF/JPG/PNG)</label><input id="trFile" type="file" accept=".pdf,.jpg,.jpeg,.png">
+<button id="trSaveBtn" class="green">Баталгааны бүртгэл хадгалах</button>
+<div id="trStatus" class="message"></div>
+</section>
+<section class="card">
+<h2>Сургалтын нэгдсэн статистик (баталгаажсан)</h2>
+<div class="grid"><div><label>Он</label><select id="statYear"></select></div><div><label>Аймаг</label><select id="statProvince"><option value="">Бүх аймаг</option></select></div></div>
+<button id="statRefresh">Статистик шинэчлэх</button><div id="statStatus" class="message"></div>
+<div class="table-wrap"><table><thead><tr><th>№</th><th>Сургалтын төрөл</th><th>Сургалтын тоо</th><th>Хамрагдсан хүн</th><th>Эрэгтэй</th><th>Эмэгтэй</th></tr></thead><tbody id="statTable"></tbody></table></div>
+<div id="statTotals"></div>
+</section>
+<div class="card">
+
+<div class="toolbar">
+<h2>Тайлангууд</h2>
+<button id="refreshBtn">Шинэчлэх</button>
+</div>
+
+<div id="reportStatus" class="message"></div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Аймаг / Сум</th>
+<th>Төрөл</th>
+<th>Хугацаа</th>
+<th>Гарчиг</th>
+<th>Тайлбар</th>
+<th>Төлөв / Файл</th>
+<th>Үйлдэл</th>
+</tr>
+</thead>
+<tbody id="reportTable"></tbody>
+</table>
+</div>
+
+</div>
+</section>
+</div>
+
+<script>
+const SUPABASE_URL="https://djzlkhvkpmhgxoykeozt.supabase.co";
+const SUPABASE_KEY="sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d";
+
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const $=id=>document.getElementById(id);
+
+let currentUser=null;
+let profile={};
+let reports=[];
+let adminData=null;
+
+function message(id,text,type=""){
+$(id).textContent=text;
+$(id).className="message "+type;
+}
+
+// НЭВТРЭХ
+async function login(){
+const email=$("email").value.trim();
+const password=$("password").value;
+
+if(!email||!password){
+message("loginStatus","И-мэйл болон нууц үгээ оруулна уу.","error");
+return;
+}
+
+$("loginBtn").disabled=true;
+message("loginStatus","Нэвтэрч байна...");
 
 try{
 const {data,error}=await sb.auth.signInWithPassword({email,password});
@@ -405,441 +654,21 @@ a.click();
 
 URL.revokeObjectURL(a.href);
 }
-  e("loginStatus","Нэвтэрч байна...");
 
-try{
-const {data,error}=await sb.auth.signInWithPassword({email,password});
-if(error)throw error;
 
-currentUser=data.user;
-await showApp();
 
-}catch(e){
-message("loginStatus","Нэвтрэх алдаа: "+e.message,"error");
-}finally{
-$("loginBtn").disabled=false;
-}
-}
-
-// ГАРАХ
-async function logout(){
-await sb.auth.signOut();
-currentUser=null;
-profile={};
-
-$("appSection").classList.add("hidden");
-$("loginSection").classList.remove("hidden");
-$("password").value="";
-message("loginStatus","Системээс гарлаа.");
-}
-
-// СИСТЕМ НЭЭХ
-async function showApp(){
-$("loginSection").classList.add("hidden");
-$("appSection").classList.remove("hidden");
-$("userInfo").textContent=currentUser.email;
-
-const {data,error}=await sb.from("user_profiles")
-.select("*")
-.eq("user_id",currentUser.id)
-.maybeSingle();
-
-if(error)throw error;
-if(!data)throw Error("Хэрэглэгчийн profile олдсонгүй.");
-
-profile=data;
-
-$("adminBox").classList.toggle("hidden",profile.role!=="admin");
-
-initYears();
-await loadProvinces();
-await loadReports();
-fillTrainingTypes();
-await loadTrainingLocations();
-$("statYear").innerHTML="";
-for(let y=new Date().getFullYear();y>=2020;y--)
-$("statYear").add(new Option(y,y));
-
-const sp=await sb.from("provinces").select("id,name").order("id");
-(sp.data||[]).forEach(x=>$("statProvince").add(new Option(x.name,x.id)));
-await loadStatistics();
-}
-
-// ОН, САР
-function initYears(){
-const y=$("reportYear");
-y.innerHTML="";
-for(let i=new Date().getFullYear();i>=2020;i--){
-y.add(new Option(i+" он",i));
-}
-
-const m=$("reportMonth");
-m.innerHTML="";
-for(let i=1;i<=12;i++){
-m.add(new Option(i+"-р сар",i));
-}
-}
-
-// АЙМАГ
-async function loadProvinces(){
-const s=$("province");
-s.innerHTML='<option value="">Аймаг сонгоно уу</option>';
-
-let q=sb.from("provinces").select("id,name").order("id");
-
-if(profile.role!=="admin"){
-q=q.eq("id",profile.province_id);
-}
-
-const {data,error}=await q;
-if(error)throw error;
-
-(data||[]).forEach(p=>s.add(new Option(p.name,p.id)));
-
-if(profile.province_id){
-s.value=profile.province_id;
-await loadUnits();
-}
-}
-
-// СУМ / ДҮҮРЭГ
-async function loadUnits(){
-const pid=$("province").value;
-const s=$("unit");
-
-s.innerHTML='<option value="">Сум / Дүүрэг сонгоно уу</option>';
-
-if(!pid)return;
-
-let q=sb.from("units")
-.select("id,name")
-.eq("province_id",pid)
-.order("name");
-
-if(profile.role==="district"||profile.role==="unit"){
-q=q.eq("id",profile.unit_id);
-}
-
-const {data,error}=await q;
-if(error)throw error;
-
-(data||[]).forEach(u=>s.add(new Option(u.name,u.id)));
-
-if(profile.unit_id)s.value=profile.unit_id;
-}
-
-// ХУГАЦАА
-function changePeriod(){
-const p=$("period").value;
-
-$("monthBox").classList.toggle("hidden",p!=="month");
-$("quarterBox").classList.toggle("hidden",p!=="quarter");
-$("halfBox").classList.toggle("hidden",p!=="half");
-}
-
-// ТАЙЛАН ХАДГАЛАХ
-async function saveReport(){
-const pid=$("province").value;
-const uid=$("unit").value;
-const titleValue=$("title").value.trim();
-const edit=$("editId").value;
-const p=$("period").value;
-
-if(!pid||!uid||!titleValue){
-message("formStatus","Аймаг, сум, гарчгийг бөглөнө үү.","error");
-return;
-}
-
-const data={
-created_by:currentUser.id,
-province_id:+pid,
-unit_id:+uid,
-report_type:$("reportType").value,
-report_year:+$("reportYear").value,
-report_month:p==="month"?+$("reportMonth").value:null,
-report_quarter:p==="quarter"?+$("reportQuarter").value:null,
-report_half:p==="half"?+$("reportHalf").value:null,
-title:titleValue,
-description:$("description").value.trim(),
-status:"Бүртгэсэн",
-review_status:$("reportSubmitStatus").value
-};
-
-$("saveBtn").disabled=true;
-
-try{
-let r;
-const f=$("reportFile").files[0];
-if(f){
- if(f.size>10*1024*1024)throw Error("Файл 10MB-аас их байна.");
- const path=currentUser.id+"/reports/"+Date.now()+"_"+f.name.replace(/[^a-zA-Z0-9._-]/g,"_");
- const up=await sb.storage.from("training-files").upload(path,f,{upsert:false});
- if(up.error)throw up.error;
- data.report_file=path;
- data.submitted_at=data.review_status==="Илгээсэн"?new Date().toISOString():null;
-}
-if(edit){
-r=await sb.from("reports").update(data)
-.eq("id",edit)
-.eq("created_by",currentUser.id);
-}else{
-r=await sb.from("reports").insert(data);
-}
-
-if(r.error)throw r.error;
-
-message("formStatus","Амжилттай хадгаллаа.","success");
-cancelEdit();
-await loadReports();
-
-}catch(e){
-message("formStatus","Алдаа: "+e.message,"error");
-}finally{
-$("saveBtn").disabled=false;
-}
-}
-
-// ХУГАЦААНЫ ТЕКСТ
-function periodText(r){
-if(r.report_month)return r.report_year+" / "+r.report_month+"-р сар";
-if(r.report_quarter)return r.report_year+" / "+r.report_quarter+"-р улирал";
-if(r.report_half)return r.report_year+" / "+r.report_half+"-р хагас";
-return r.report_year+" он";
-}
-
-// ТАЙЛАН АЧААЛАХ
-async function loadReports(){
-if(!currentUser)return;
-
-let q=sb.from("reports")
-.select("*")
-.order("created_at",{ascending:false});
-
-if(profile.role!=="admin"){
-q=q.eq("created_by",currentUser.id);
-}
-
-const {data,error}=await q;
-
-if(error){
-message("reportStatus",error.message,"error");
-return;
-}
-
-reports=data||[];
-
-const ps=[...new Set(reports.map(r=>r.province_id))];
-const us=[...new Set(reports.map(r=>r.unit_id))];
-
-let pm={},um={};
-
-if(ps.length){
-const a=await sb.from("provinces").select("id,name").in("id",ps);
-(a.data||[]).forEach(x=>pm[x.id]=x.name);
-}
-
-if(us.length){
-const a=await sb.from("units").select("id,name").in("id",us);
-(a.data||[]).forEach(x=>um[x.id]=x.name);
-}
-
-$("reportTable").innerHTML="";
-
-reports.forEach((r,i)=>{
-const tr=document.createElement("tr");
-
-[
-i+1,
-(pm[r.province_id]||"")+" / "+(um[r.unit_id]||""),
-r.report_type,
-periodText(r),
-r.title,
-r.description,
-(r.review_status||"Ноорог")+(r.report_file?" | файл хавсаргасан":"")
-].forEach(v=>{
-const td=document.createElement("td");
-td.textContent=v||"";
-tr.appendChild(td);
-});
-
-const td=document.createElement("td");
-
-const b=document.createElement("button");
-b.textContent="Засах";
-b.onclick=()=>editReport(r.id);
-td.appendChild(b);
-
-const d=document.createElement("button");
-d.textContent="Устгах";
-d.className="danger";
-d.onclick=()=>deleteReport(r.id);
-td.appendChild(d);
-
-tr.appendChild(td);
-$("reportTable").appendChild(tr);
-});
-
-message("reportStatus","Нийт "+reports.length+" тайлан байна.","success");
-}
-
-// ТАЙЛАН ЗАСАХ
-async function editReport(id){
-const r=reports.find(x=>String(x.id)===String(id));
-if(!r)return;
-
-$("editId").value=r.id;
-$("reportType").value=r.report_type;
-
-$("period").value=
-r.report_month?"month":
-r.report_quarter?"quarter":
-r.report_half?"half":"year";
-
-changePeriod();
-
-$("reportYear").value=r.report_year;
-
-if(r.report_month)$("reportMonth").value=r.report_month;
-if(r.report_quarter)$("reportQuarter").value=r.report_quarter;
-if(r.report_half)$("reportHalf").value=r.report_half;
-
-$("province").value=r.province_id;
-await loadUnits();
-$("unit").value=r.unit_id;
-
-$("title").value=r.title;
-$("description").value=r.description||"";
-
-$("formTitle").textContent="Тайлан засах";
-$("saveBtn").textContent="Өөрчлөлт хадгалах";
-$("cancelBtn").classList.remove("hidden");
-}
-
-// ЗАСВАР ЦУЦЛАХ
-function cancelEdit(){
-$("editId").value="";
-$("title").value="";
-$("description").value="";
-
-$("formTitle").textContent="Тайлан бүртгэх";
-$("saveBtn").textContent="Тайлан хадгалах";
-
-$("cancelBtn").classList.add("hidden");
-$("province").value="";
-$("unit").innerHTML='<option value="">Аймаг сонгоно уу</option>';
-
-$("period").value="month";
-changePeriod();
-}
-
-// ТАЙЛАН УСТГАХ
-async function deleteReport(id){
-if(!confirm("Тайлан устгах уу?"))return;
-
-let q=sb.from("reports").delete().eq("id",id);
-
-if(profile.role!=="admin"){
-q=q.eq("created_by",currentUser.id);
-}
-
-const {error}=await q;
-
-if(error){
-alert(error.message);
-}else{
-await loadReports();
-}
-}
-
-// 30 БАЙГУУЛЛАГА ҮҮСГЭХ
-async function createInstitutions(){
-if(profile.role!=="admin"){
-alert("Админ эрх шаардлагатай");
-return;
-}
-
-if(!confirm("21 аймаг + 9 дүүргийн хэрэглэгч үүсгэх үү?"))return;
-
-$("createBtn").disabled=true;
-message("adminStatus","Бүртгэл үүсгэж байна...");
-
-try{
-const {data,error}=await sb.functions.invoke("super-handler",{body:{}});
-if(error){
-  let detail="";
-  try{
-    detail=await error.context.text();
-  }catch(e){
-    detail=error.message;
-  }
-  throw new Error(detail);
-}
-if(data.error)throw Error(JSON.stringify(data));
-
-if(error)throw error;
-if(data.error)throw Error(data.error);
-
-adminData=data;
-$("adminResult").textContent=JSON.stringify(data,null,2);
-
-message("adminStatus",data.message||"Бүртгэл дууслаа.","success");
-$("downloadBtn").classList.remove("hidden");
-
-}catch(e){
-message("adminStatus","Алдаа: "+e.message,"error");
-}finally{
-$("createBtn").disabled=false;
-}
-}
-
-// CSV ТАТАХ
-function downloadCSV(){
-if(!adminData?.results)return;
-
-const rows=[
-["Код","Байгууллага","Email","Нууц үг","Төлөв","Алдаа"],
-...adminData.results.map(x=>[
-x.code,x.name,x.email,x.password,x.status,x.error
-])
-];
-
-const csv="\uFEFF"+rows.map(r=>
-r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(",")
-).join("\r\n");
-
-const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-const a=document.createElement("a");
-
-a.href=URL.createObjectURL(blob);
-a.download="30_baiguullaga.csv";
-a.click();
-
-URL.revokeObjectURL(a.href);
-}
-  // ҮРГЭЛЖЛЭЛ
 // СУРГАЛТЫН 14 ТӨРӨЛ
 const trainingTypes=[
-"Гамшгаас хамгаалах иж бүрэн сургууль",
-"Гамшгаас хамгаалах Команд штабын сургууль",
-"Удирдах албан тушаалтны",
-"Сургуулийн ахлах ангийн сурагчдын",
-"Сургуулийн дунд ангийн сурагчдын",
-"Сургуулийн бага ангийн сурагчдын",
-"Сургуулийн өмнөх боловсролын байгууллага",
-"Гамшгаас хамгаалах алба, мэргэжлийн анги",
-"Их, дээд сургууль, МСҮТ, коллежийн",
-"Төрийн захиргаа болон хуулийн этгээдийн",
-"Цэргийн дүйцүүлэх албаны",
-"Сайн дурын иргэн, бүлгийн",
-"Иргэдийн",
-"Хөгжлийн бэрхшээлтэй иргэдийн"
-];
-
+"Гамшгаас хамгаалах иж бүрэн сургууль","Гамшгаас хамгаалах Команд штабын сургууль",
+"Удирдах албан тушаалтны","Сургуулийн ахлах ангийн сурагчдын",
+"Сургуулийн дунд ангийн сурагчдын","Сургуулийн бага ангийн сурагчдын",
+"Сургуулийн өмнөх боловсролын байгууллага","Гамшгаас хамгаалах алба, мэргэжлийн анги",
+"Их, дээд сургууль, МСҮТ, коллежийн","Төрийн захиргаа болон хуулийн этгээдийн",
+"Цэргийн дүйцүүлэх албаны","Сайн дурын иргэн, бүлгийн","Иргэдийн","Хөгжлийн бэрхшээлтэй иргэдийн"];
 function fillTrainingTypes(){
  $("trType").innerHTML='<option value="">Сонгоно уу</option>';
  trainingTypes.forEach(t=>$("trType").add(new Option(t,t)));
 }
-
 async function loadTrainingLocations(){
  const a=await sb.from("provinces").select("id,name").order("id");
  $("trProvince").innerHTML='<option value="">Аймаг сонгоно уу</option>';
@@ -847,114 +676,36 @@ async function loadTrainingLocations(){
  if(profile.province_id)$("trProvince").value=profile.province_id;
  await loadTrainingUnits();
 }
-
 async function loadTrainingUnits(){
  const pid=$("trProvince").value;
  $("trUnit").innerHTML='<option value="">Сум / Дүүрэг сонгоно уу</option>';
  if(!pid)return;
  let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");
  if(profile.unit_id)q=q.eq("id",profile.unit_id);
- const x=await q;
- (x.data||[]).forEach(u=>$("trUnit").add(new Option(u.name,u.id)));
+ const x=await q;(x.data||[]).forEach(u=>$("trUnit").add(new Option(u.name,u.id)));
  if(profile.unit_id)$("trUnit").value=profile.unit_id;
 }
-
 async function saveTraining(){
- const pid=$("trProvince").value;
- const uid=$("trUnit").value;
- const date=$("trDate").value;
- const total=+$("trTotal").value;
- const male=+$("trMale").value;
- const female=+$("trFemale").value;
+ const pid=$("trProvince").value, uid=$("trUnit").value, date=$("trDate").value;
+ const total=+$("trTotal").value,male=+$("trMale").value,female=+$("trFemale").value;
  const topic=$("trTopic").value==="Бусад"?$("trTopicOther").value.trim():$("trTopic").value;
-
- if(!pid||!uid||!date||!$("trType").value||!$("trOrgName").value.trim()||!topic){
- message("trStatus","Огноо, аймаг/сум, төрөл, байгууллагын нэр, сэдвийг бөглөнө.","error");
- return;
- }
-
- if(male+female>total){
- message("trStatus","Эрэгтэй + эмэгтэй тоо нийт оролцогчоос их байна.","error");
- return;
- }
-
+ if(!pid||!uid||!date||!$("trType").value||!$("trOrgName").value.trim()||!topic){message("trStatus","Огноо, аймаг/сум, төрөл, байгууллагын нэр, сэдвийг бөглөнө.","error");return}
+ if(male+female>total){message("trStatus","Эрэгтэй + эмэгтэй тоо нийт оролцогчоос их байна.","error");return}
  try{
-  let filePath=null;
-  const f=$("trFile").files[0];
-
-  if(f){
-   if(f.size>10*1024*1024)throw Error("Файл 10MB-аас их байна.");
-   filePath=currentUser.id+"/training/"+Date.now()+"_"+f.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-   const u=await sb.storage.from("training-files").upload(filePath,f);
-   if(u.error)throw u.error;
-  }
-
-  const ins=await sb.from("training_records").insert({
-   created_by:currentUser.id,
-   province_id:+pid,
-   unit_id:+uid,
-   training_date:date,
-   training_type:$("trType").value,
-   organization_type:$("trOrgType").value,
-   organization_name:$("trOrgName").value.trim(),
-   participant_total:total,
-   male_count:male,
-   female_count:female,
-   training_format:$("trFormat").value,
-   training_topic:topic,
-   certificate_file:filePath,
-   review_status:"Илгээсэн",
-   submitted_at:new Date().toISOString()
-  });
-
-  if(ins.error)throw ins.error;
-  message("trStatus","Баталгааны бүртгэл илгээгдлээ.","success");
-  await loadStatistics();
-
- }catch(e){
-  message("trStatus","Алдаа: "+e.message,"error");
- }
+  let filePath=null;const f=$("trFile").files[0];
+  if(f){if(f.size>10*1024*1024)throw Error("Файл 10MB-аас их байна.");filePath=currentUser.id+"/training/"+Date.now()+"_"+f.name.replace(/[^a-zA-Z0-9._-]/g,"_");const u=await sb.storage.from("training-files").upload(filePath,f);if(u.error)throw u.error}
+  const ins=await sb.from("training_records").insert({created_by:currentUser.id,province_id:+pid,unit_id:+uid,training_date:date,training_type:$("trType").value,organization_type:$("trOrgType").value,organization_name:$("trOrgName").value.trim(),participant_total:total,male_count:male,female_count:female,training_format:$("trFormat").value,training_topic:topic,certificate_file:filePath,review_status:"Илгээсэн",submitted_at:new Date().toISOString()});
+  if(ins.error)throw ins.error;message("trStatus","Баталгааны бүртгэл илгээгдлээ.","success");await loadStatistics();
+ }catch(e){message("trStatus","Алдаа: "+e.message,"error")}
 }
-
 async function loadStatistics(){
- const year=+$("statYear").value;
- const prov=$("statProvince").value;
-
- let q=sb.from("training_records")
- .select("training_type,participant_total,male_count,female_count,province_id,training_date")
- .eq("review_status","Баталгаажсан")
- .gte("training_date",year+"-01-01")
- .lte("training_date",year+"-12-31");
-
+ const year=+$("statYear").value,prov=$("statProvince").value;
+ let q=sb.from("training_records").select("training_type,participant_total,male_count,female_count,province_id,training_date").eq("review_status","Баталгаажсан").gte("training_date",year+"-01-01").lte("training_date",year+"-12-31");
  if(prov)q=q.eq("province_id",+prov);
-
- const r=await q;
-
- if(r.error){
- message("statStatus",r.error.message,"error");
- return;
- }
-
- const rows=trainingTypes.map(t=>{
- const a=(r.data||[]).filter(x=>x.training_type===t);
- return {
- t,
- n:a.length,
- p:a.reduce((s,x)=>s+x.participant_total,0),
- m:a.reduce((s,x)=>s+x.male_count,0),
- f:a.reduce((s,x)=>s+x.female_count,0)
- };
- });
-
- $("statTable").innerHTML=rows.map((x,i)=>
- `<tr><td>${i+1}</td><td>${x.t}</td><td>${x.n}</td><td>${x.p}</td><td>${x.m}</td><td>${x.f}</td></tr>`
- ).join("");
-
- const n=rows.reduce((s,x)=>s+x.n,0);
- const p=rows.reduce((s,x)=>s+x.p,0);
- const m=rows.reduce((s,x)=>s+x.m,0);
- const f=rows.reduce((s,x)=>s+x.f,0);
-
+ const r=await q;if(r.error){message("statStatus",r.error.message,"error");return}
+ const rows=trainingTypes.map(t=>{const a=(r.data||[]).filter(x=>x.training_type===t);return {t,n:a.length,p:a.reduce((s,x)=>s+x.participant_total,0),m:a.reduce((s,x)=>s+x.male_count,0),f:a.reduce((s,x)=>s+x.female_count,0)}});
+ $("statTable").innerHTML=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.t}</td><td>${x.n}</td><td>${x.p}</td><td>${x.m}</td><td>${x.f}</td></tr>`).join("");
+ const n=rows.reduce((s,x)=>s+x.n,0),p=rows.reduce((s,x)=>s+x.p,0),m=rows.reduce((s,x)=>s+x.m,0),f=rows.reduce((s,x)=>s+x.f,0);
  $("statTotals").innerHTML=`<h3>Нийт: ${n} сургалт | ${p} хүн (Эрэгтэй ${m}, Эмэгтэй ${f})</h3>`;
  message("statStatus","Баталгаажсан сургалтын дүн.","success");
 }
@@ -969,30 +720,28 @@ $("cancelBtn").addEventListener("click",cancelEdit);
 $("refreshBtn").addEventListener("click",loadReports);
 $("createBtn").addEventListener("click",createInstitutions);
 $("downloadBtn").addEventListener("click",downloadCSV);
-$("trProvince").addEventListener("change",loadTrainingUnits);
-$("trSaveBtn").addEventListener("click",saveTraining);
-$("statRefresh").addEventListener("click",loadStatistics);
+$("trProvince").addEventListener("change",loadTrainingUnits);$("trSaveBtn").addEventListener("click",saveTraining);$("statRefresh").addEventListener("click",loadStatistics);
 
 // ENTER ДАРАХАД НЭВТРЭХ
 $("password").addEventListener("keydown",e=>{
- if(e.key==="Enter")login();
+if(e.key==="Enter")login();
 });
 
 // СИСТЕМ ЭХЛҮҮЛЭХ
 async function init(){
- initYears();
+initYears();
 
- try{
- const {data,error}=await sb.auth.getSession();
- if(error)throw error;
+try{
+const {data,error}=await sb.auth.getSession();
+if(error)throw error;
 
- if(data.session){
- currentUser=data.session.user;
- await showApp();
- }
- }catch(e){
- message("loginStatus","Алдаа: "+e.message,"error");
- }
+if(data.session){
+currentUser=data.session.user;
+await showApp();
+}
+}catch(e){
+message("loginStatus","Алдаа: "+e.message,"error");
+}
 }
 
 init();
