@@ -41,7 +41,63 @@ const response = await fetch(
       "Content-Type": "application/json",
       "apikey": SUPABASE_ANON_KEY,
       "Authorization": `Bearer ${sessionData.session.access_token}`
-    },
+  
+<!-- 30 байгууллага бүртгэх админ товч -->
+<div id="admin-create-box" style="display:none; padding:20px;">
+  <h3>Байгууллагын хэрэглэгч бүртгэх</h3>
+  <button id="createInstitutionsBtn"
+    style="background:#2563eb;color:white;padding:12px 20px;border:0;border-radius:8px;">
+    30 байгууллага үүсгэх
+  </button>
+  <pre id="createInstitutionsResult"
+    style="white-space:pre-wrap;overflow-wrap:anywhere;"></pre>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const box = document.getElementById("admin-create-box");
+  const btn = document.getElementById("createInstitutionsBtn");
+  const result = document.getElementById("createInstitutionsResult");
+
+  // Зөвхөн админд харагдана
+  const { data: sessionData } = await supabase.auth.getSession();
+
+  if (!sessionData.session) return;
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("role")
+    .eq("user_id", sessionData.session.user.id)
+    .single();
+
+  if (profile?.role !== "admin") return;
+
+  box.style.display = "block";
+
+  btn.addEventListener("click", async () => {
+    if (!confirm("30 байгууллагын хэрэглэгч үүсгэх үү?")) return;
+
+    btn.disabled = true;
+    result.textContent = "Бүртгэл үүсгэж байна...";
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "super-handler",
+        { body: {} }
+      );
+
+      if (error) throw error;
+
+      result.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      result.textContent = "Алдаа: " + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+});
+</script>
+  },
     body: JSON.stringify({ institutions })
   }
 );
