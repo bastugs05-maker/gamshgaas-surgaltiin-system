@@ -90,10 +90,11 @@ async function openFile(path){
     const at=objectPath.indexOf(marker);
     if(at>=0){
       objectPath=objectPath.slice(at+marker.length);
-      objectPath=objectPath.replace(/^sign\\/training-files\\//,"").replace(/^public\\/training-files\\//,"").split("?")[0];
-    }
-  }
-  objectPath=objectPath.replace(/^\\/+/, "");
+     
+objectPath=objectPath.replace(/^sign\/training-files\//,"").replace(/^public\/training-files\//,"").split("?")[0];
+}
+}
+objectPath=objectPath.replace(/^\/+/,"");
   // URL encoded path бол decode хийх
   try{objectPath=decodeURIComponent(objectPath)}catch(_){}
   if(objectPath.startsWith("training-files/"))objectPath=objectPath.slice("training-files/".length);
