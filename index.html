@@ -35,6 +35,10 @@ button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8
   <div class="card"><small>Нийт хамрагдсан хүн</small><h2 id="dashPeople">—</h2></div>
   <div class="card"><small>Баталгаажсан</small><h2 id="dashApproved">—</h2></div>
   <div class="card"><small>Хүлээгдэж буй</small><h2 id="dashPending">—</h2></div>
+  <div class="card"><small>Нийт тайлан</small><h2 id="dashTotalReports">—</h2></div>
+  <div class="card"><small>Тайлан ирүүлсэн байгууллага</small><h2 id="dashSubmittedUnits">— / 32</h2></div>
+  <div class="card"><small>Тайлан ирүүлээгүй байгууллага</small><h2 id="dashMissingUnits">—</h2></div>
+  <div class="card"><small>Жилийн гүйцэтгэл</small><h2 id="dashYearPerformance">—</h2></div>
  </div>
  <div class="grid">
   <div><label>Тайлангийн он</label><select id="dashYear"></select></div>
@@ -169,7 +173,7 @@ function exportDashboardExcel(){
  if(!dashboardExportData){message("dashStatus","Эхлээд Dashboard-ийг шинэчилнэ үү.","error");return}
  if(!window.XLSX){message("dashStatus","Excel сан ачаалагдсангүй. Интернетээ шалгана уу.","error");return}
  const d=dashboardExportData,wb=XLSX.utils.book_new();
- const summary=[["Удирдлагын Dashboard"],["Тайлангийн он",d.year],["Хугацаа",d.period],[],["Үзүүлэлт","Дүн"],["Нийт сургалт",d.summary.totalTrainings],["Нийт хамрагдсан хүн",d.summary.totalPeople],["Баталгаажсан сургалт",d.summary.approved],["Хүлээгдэж буй",d.summary.pending],["Тайлан ирүүлсэн нэгж",`${d.summary.submittedUnits}/${d.summary.totalUnits}`],["Тайлан ирүүлэлтийн хувь",d.summary.submissionRate.toFixed(1)+"%"],["Нийт тайлан",d.summary.totalReports]];
+ const summary=[["Удирдлагын Dashboard"],["Тайлангийн он",d.year],["Хугацаа",d.period],[],["Үзүүлэлт","Дүн"],["Нийт сургалт",d.summary.totalTrainings],["Нийт хамрагдсан хүн",d.summary.totalPeople],["Баталгаажсан сургалт",d.summary.approved],["Хүлээгдэж буй",d.summary.pending],["Тайлан ирүүлсэн нэгж",`${d.summary.submittedUnits}/${d.summary.totalUnits}`],["Тайлан ирүүлэлтийн хувь",d.summary.submissionRate.toFixed(1)+"%"],["Нийт тайлан",d.summary.totalReports],["Тайлан ирүүлээгүй байгууллага",d.summary.missingUnits],["Жилийн гүйцэтгэл",d.summary.yearPerformance]];
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),"Нэгдсэн дүн");
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d.provinceRows.map(x=>({"Аймаг":x.name,"Бодит сургалт":x.actual,"Хамрагдсан хүн":x.people,"Төлөвлөсөн сургалт":x.planned,"Биелэлт (%)":x.pct===null?"":Number(x.pct.toFixed(1))}))),"Сургалтын гүйцэтгэл");
  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d.comparison.map((x,i)=>({"Эрэмбэ":i+1,"Аймаг/Нийслэл":x.name,"Тайлан":x.reports,"Сургалт":x.trainings,"Тайлан ирүүлсэн":x.hasReport?"Тийм":"Үгүй"}))),"Тайлангийн харьцуулалт");
@@ -184,7 +188,7 @@ function exportDashboardPdf(){
  ["Нийт сургалт",d.summary.totalTrainings],["Нийт хамрагдсан хүн",d.summary.totalPeople],
  ["Баталгаажсан сургалт",d.summary.approved],["Хүлээгдэж буй",d.summary.pending],
  ["Тайлан ирүүлсэн нэгж",`${d.summary.submittedUnits}/${d.summary.totalUnits}`],
- ["Тайлан ирүүлэлтийн хувь",d.summary.submissionRate.toFixed(1)+"%"],["Нийт тайлан",d.summary.totalReports]]);
+ ["Тайлан ирүүлэлтийн хувь",d.summary.submissionRate.toFixed(1)+"%"],["Нийт тайлан",d.summary.totalReports],["Тайлан ирүүлээгүй байгууллага",d.summary.missingUnits],["Жилийн гүйцэтгэл",d.summary.yearPerformance]]);
  const provinces=table(["Аймаг/Нэгж","Сургалт","Хүн","Төлөвлөгөө","Биелэлт %"],d.provinceRows.map(x=>[x.name,x.actual,x.people,x.planned,x.pct===null?"—":x.pct.toFixed(1)+"%"]));
  const comparison=table(["Эрэмбэ","Аймаг/Нэгж","Тайлан","Сургалт","Төлөв"],d.comparison.map((x,i)=>[i+1,x.name,x.reports,x.trainings,x.hasReport?"Ирүүлсэн":"Ирүүлээгүй"]));
  const w=window.open("","_blank");if(!w){message("dashStatus","Popup цонхыг зөвшөөрөөд дахин оролдоно уу.","error");return}
@@ -222,7 +226,14 @@ async function loadDashboard(){
   const reportCounts={},trainingCounts={};submitted.forEach(r=>reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1);all.forEach(r=>trainingCounts[r.province_id]=(trainingCounts[r.province_id]||0)+1);
   const comparison=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>({id:p.id,name:p.name,reports:reportCounts[p.id]||0,trainings:trainingCounts[p.id]||0,hasReport:(reportCounts[p.id]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
   const submittedUnits=comparison.filter(r=>r.hasReport).length,rate=comparison.length?submittedUnits/comparison.length*100:0;
-  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople:all.reduce((s,r)=>s+Number(r.participant_total||0),0),approved:approved.length,pending:pending.length,submittedUnits,totalUnits:comparison.length,submissionRate:rate,totalReports:submitted.length},provinceRows:rows,comparison};
+  const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
+  const missingUnits=Math.max(0,comparison.length-submittedUnits);
+  const yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
+  $("dashTotalReports").textContent=submitted.length.toLocaleString();
+  $("dashSubmittedUnits").textContent=`${submittedUnits} / ${comparison.length}`;
+  $("dashMissingUnits").textContent=missingUnits.toLocaleString()+" байгууллага";
+  $("dashYearPerformance").textContent=yearPerformance;
+  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits:comparison.length,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
   $("cmpSubmitted").textContent=submittedUnits+" / "+comparison.length;$('cmpRate').textContent=rate.toFixed(1)+"%";$('cmpReports').textContent=submitted.length.toLocaleString();$('cmpTrainings').textContent=all.length.toLocaleString();
   const maxReports=Math.max(1,...comparison.map(r=>r.reports));$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
   $('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
