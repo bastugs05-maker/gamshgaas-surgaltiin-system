@@ -22,7 +22,70 @@ button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8
 <section id="loginSection" class="card"><h2>Системд нэвтрэх</h2><label>И-мэйл</label><input id="email" type="email" autocomplete="username"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn">Нэвтрэх</button><div id="loginStatus" class="message"></div></section>
 <section id="appSection" class="hidden">
 <div class="card toolbar"><h2>Үндсэн хэсэг</h2><div id="userInfo"></div><button id="logoutBtn" class="secondary">Гарах</button></div>
-<section id="adminBox" class="card hidden"><h2>АДМИН — байгууллага</h2><button id="createBtn">30 байгууллага үүсгэх</button><button id="downloadBtn" class="green hidden">CSV татах</button><div id="adminStatus" class="message"></div><pre id="adminResult"></pre></section>
+<section id="adminBox" 
+<!-- СУРГАЛТЫН ТӨЛӨВЛӨГӨӨ УДИРДАХ -->
+<section id="planBox" class="card hidden">
+  <h2>Сургалтын төлөвлөгөө — Удирдлага</h2>
+
+  <div class="grid">
+    <div>
+      <label>Аймаг / Нийслэл / Байгууллага</label>
+      <select id="planProvince"></select>
+    </div>
+
+    <div>
+      <label>Төлөвлөгөөний он</label>
+      <select id="planYear"></select>
+    </div>
+
+    <div>
+      <label>Төлөвлөгөөний хугацаа</label>
+      <select id="planPeriod">
+        <option value="I улирал">I улирал</option>
+        <option value="II улирал">II улирал</option>
+        <option value="III улирал">III улирал</option>
+        <option value="IV улирал">IV улирал</option>
+        <option value="I хагас жил">I хагас жил</option>
+        <option value="II хагас жил">II хагас жил</option>
+        <option value="Бүтэн жил">Бүтэн жил</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Төлөвлөсөн сургалтын тоо</label>
+      <input id="planCount" type="number" min="0" value="0">
+    </div>
+  </div>
+
+  <input id="planEditId" type="hidden">
+
+  <button id="planSaveBtn">Төлөвлөгөө хадгалах</button>
+  <button id="planCancelBtn" class="secondary hidden">Болих</button>
+
+  <div id="planStatus" class="message"></div>
+
+  <div class="toolbar">
+    <h2>Төлөвлөгөөний нэгтгэл</h2>
+    <button id="planRefreshBtn" class="secondary">Шинэчлэх</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>№</th>
+          <th>Аймаг / Байгууллага</th>
+          <th>Он</th>
+          <th>Хугацаа</th>
+          <th>Сургалтын тоо</th>
+          <th>Үйлдэл</th>
+        </tr>
+      </thead>
+      <tbody id="planTable"></tbody>
+    </table>
+  </div>
+</section>
+ class="card hidden"><h2>АДМИН — байгууллага</h2><button id="createBtn">30 байгууллага үүсгэх</button><button id="downloadBtn" class="green hidden">CSV татах</button><div id="adminStatus" class="message"></div><pre id="adminResult"></pre></section>
 <section class="card"><h2 id="formTitle">Тайлан бүртгэх</h2><input id="editId" type="hidden"><div class="grid">
 <div><label>Аймаг / Нийслэл</label><select id="province"></select></div><div><label>Сум / Дүүрэг</label><select id="unit"></select></div>
 <div><label>Тайлангийн төрөл</label><select id="reportType"><option>SM1</option><option>Сургалтын тайлан</option><option>Мэдээлэл</option><option>Бусад</option></select></div>
@@ -57,9 +120,241 @@ function message(id,t,c=""){$(id).textContent=t;$(id).className="message "+c}
 function safeError(e){return e?.message||String(e)}
 async function login(){const email=$("email").value.trim(),password=$("password").value;if(!email||!password)return message("loginStatus","И-мэйл, нууц үгээ оруулна уу.","error");$("loginBtn").disabled=true;message("loginStatus","Нэвтэрч байна...");try{if(!sb)throw Error("Supabase сан ачаалагдсангүй.");let x=await sb.auth.signInWithPassword({email,password});if(x.error)throw x.error;currentUser=x.data.user;await showApp()}catch(e){$("loginSection").classList.remove("hidden");$("appSection").classList.add("hidden");message("loginStatus","Алдаа: "+safeError(e),"error")}finally{$("loginBtn").disabled=false}}
 async function logout(){if(sb)await sb.auth.signOut();currentUser=null;profile={};$("appSection").classList.add("hidden");$("loginSection").classList.remove("hidden");$("password").value="";message("loginStatus","Системээс гарлаа.","success")}
-async function showApp(){let p=await sb.from("user_profiles").select("*").eq("user_id",currentUser.id).maybeSingle();if(p.error)throw p.error;if(!p.data)throw Error("user_profiles-д эрхийн мэдээлэл алга.");profile=p.data;$("userInfo").textContent=currentUser.email;$("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(isReviewer())await loadReviewQueue()}
+async function showApp(){let p=await sb.from("user_profiles").select("*").eq("user_id",currentUser.id).maybeSingle();if(p.error)throw p.error;if(!p.data)throw Error("user_profiles-д эрхийн мэдээлэл алга.");profile=p.data;$("userInfo").textContent=currentUser.email;
+$("planBox").classList.toggle("hidden", profile.role !== "admin");
+
+if (profile.role === "admin") {
+  await initPlanForm();
+}
+$("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(isReviewer())await loadReviewQueue()}
 function initYears(){$("reportYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("reportYear").add(new Option(y+" он",y));$("reportMonth").innerHTML="";for(let m=1;m<=12;m++)$("reportMonth").add(new Option(m+"-р сар",m))}
 
+
+/* =========================================
+   СУРГАЛТЫН ТӨЛӨВЛӨГӨӨ — УДИРДЛАГА
+========================================= */
+
+async function initPlanForm() {
+  const provinceSelect = $("planProvince");
+  const yearSelect = $("planYear");
+
+  provinceSelect.innerHTML =
+    '<option value="">Байгууллага сонгоно уу</option>';
+
+  const { data, error } = await sb
+    .from("provinces")
+    .select("id,name")
+    .order("id");
+
+  if (error) {
+    message("planStatus", error.message, "error");
+    return;
+  }
+
+  (data || []).forEach(p => {
+    provinceSelect.add(new Option(p.name, p.id));
+  });
+
+  yearSelect.innerHTML = "";
+
+  for (let y = new Date().getFullYear(); y >= 2020; y--) {
+    yearSelect.add(new Option(y + " он", y));
+  }
+
+  await loadPlans();
+}
+
+async function savePlan() {
+  const provinceId = $("planProvince").value;
+  const year = $("planYear").value;
+  const period = $("planPeriod").value;
+  const count = Number($("planCount").value);
+  const editId = $("planEditId").value;
+
+  if (!provinceId || !year) {
+    return message(
+      "planStatus",
+      "Байгууллага, он сонгоно уу.",
+      "error"
+    );
+  }
+
+  if (!Number.isInteger(count) || count < 0) {
+    return message(
+      "planStatus",
+      "Сургалтын тоо 0 буюу түүнээс их бүхэл тоо байна.",
+      "error"
+    );
+  }
+
+  const payload = {
+    province_id: Number(provinceId),
+    plan_year: Number(year),
+    plan_period: period,
+    planned_trainings: count,
+    created_by: currentUser.id,
+    updated_at: new Date().toISOString()
+  };
+
+  $("planSaveBtn").disabled = true;
+
+  try {
+    let result;
+
+    if (editId) {
+      result = await sb
+        .from("training_plans")
+        .update(payload)
+        .eq("id", editId);
+    } else {
+      result = await sb
+        .from("training_plans")
+        .upsert(payload, {
+          onConflict: "province_id,plan_year,plan_period"
+        });
+    }
+
+    if (result.error) throw result.error;
+
+    message(
+      "planStatus",
+      "Сургалтын төлөвлөгөө амжилттай хадгалагдлаа.",
+      "success"
+    );
+
+    cancelPlanEdit();
+    await loadPlans();
+
+  } catch (e) {
+    message(
+      "planStatus",
+      "Алдаа: " + safeError(e),
+      "error"
+    );
+  } finally {
+    $("planSaveBtn").disabled = false;
+  }
+}
+
+async function loadPlans() {
+  const { data, error } = await sb
+    .from("training_plans")
+    .select("*")
+    .order("plan_year", { ascending: false })
+    .order("plan_period");
+
+  if (error) {
+    message("planStatus", error.message, "error");
+    return;
+  }
+
+  const plans = data || [];
+  const ids = [...new Set(plans.map(p => p.province_id))];
+
+  let names = {};
+
+  if (ids.length) {
+    const p = await sb
+      .from("provinces")
+      .select("id,name")
+      .in("id", ids);
+
+    (p.data || []).forEach(x => {
+      names[x.id] = x.name;
+    });
+  }
+
+  $("planTable").innerHTML = "";
+
+  plans.forEach((p, i) => {
+    const tr = document.createElement("tr");
+
+    [
+      i + 1,
+      names[p.province_id] || "—",
+      p.plan_year,
+      p.plan_period,
+      p.planned_trainings
+    ].forEach(value => {
+      const td = document.createElement("td");
+      td.textContent = value ?? "";
+      tr.appendChild(td);
+    });
+
+    const td = document.createElement("td");
+
+    const edit = document.createElement("button");
+    edit.textContent = "Засах";
+    edit.onclick = () => editPlan(p.id);
+    td.appendChild(edit);
+
+    const del = document.createElement("button");
+    del.textContent = "Устгах";
+    del.className = "danger";
+    del.onclick = () => deletePlan(p.id);
+    td.appendChild(del);
+
+    tr.appendChild(td);
+    $("planTable").appendChild(tr);
+  });
+
+  message(
+    "planStatus",
+    "Нийт " + plans.length + " төлөвлөгөө.",
+    "success"
+  );
+}
+
+function editPlan(id) {
+  sb.from("training_plans")
+    .select("*")
+    .eq("id", id)
+    .single()
+    .then(({ data, error }) => {
+      if (error) {
+        message("planStatus", error.message, "error");
+        return;
+      }
+
+      $("planEditId").value = data.id;
+      $("planProvince").value = data.province_id;
+      $("planYear").value = data.plan_year;
+      $("planPeriod").value = data.plan_period;
+      $("planCount").value = data.planned_trainings;
+
+      $("planSaveBtn").textContent = "Өөрчлөлт хадгалах";
+      $("planCancelBtn").classList.remove("hidden");
+    });
+}
+
+function cancelPlanEdit() {
+  $("planEditId").value = "";
+  $("planCount").value = 0;
+  $("planSaveBtn").textContent = "Төлөвлөгөө хадгалах";
+  $("planCancelBtn").classList.add("hidden");
+}
+
+async function deletePlan(id) {
+  if (!confirm("Энэ төлөвлөгөөг устгах уу?")) return;
+
+  const { error } = await sb
+    .from("training_plans")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    message("planStatus", error.message, "error");
+    return;
+  }
+
+  message(
+    "planStatus",
+    "Төлөвлөгөө устгагдлаа.",
+    "success"
+  );
+
+  await loadPlans();
+}
 async function loadProvinces() {
   const s = $("province");
   s.innerHTML = '<option value="">Аймаг / Нийслэл сонгоно уу</option>';
@@ -235,6 +530,10 @@ async function loadStatistics(){
   message("statStatus",`Баталгаажсан сургалтын дүн. Нийт ${all.length} бүртгэл тооцлоо.`,"success")
  }catch(e){message("statStatus","Статистикийн алдаа: "+safeError(e),"error")}
 }
-$("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()};
+$("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()}; 
+$("planSaveBtn").onclick = savePlan;
+$("planCancelBtn").onclick = cancelPlanEdit;
+$("planRefreshBtn").onclick = loadPlans;
+
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
 </script></body></html>
