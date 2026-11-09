@@ -1,22 +1,47 @@
+
 <!DOCTYPE html>
-<html lang="mn"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Гамшгаас хамгаалах сургалтын систем</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
-header{background:#285b94;color:white;text-align:center;padding:20px}.container{max-width:1100px;margin:20px auto;padding:12px}
-.card{background:white;padding:18px;border-radius:14px;margin-bottom:16px;box-shadow:0 4px 15px #0001}
-h2{color:#285b94}label{display:block;margin:12px 0 6px;font-weight:bold}
-input,select,textarea{width:100%;padding:11px;border:1px solid #ccd5df;border-radius:8px;font-size:16px}textarea{min-height:90px}
-button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8px;margin:5px 3px;font-weight:bold;cursor:pointer}
-.secondary{background:#64748b}.danger{background:#c0392b}.green{background:#16834a}.hidden{display:none!important}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.message{margin-top:10px;font-weight:bold;overflow-wrap:anywhere}.success{color:green}.error{color:red}
-.table-wrap{overflow:auto}table{width:100%;min-width:750px;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:9px;text-align:left}th{background:#285b94;color:white}
-.preview{width:100%;height:70vh;border:1px solid #ccd5df;border-radius:8px;background:#f8fafc}
-@media(max-width:650px){.grid{grid-template-columns:1fr}.container{padding:8px}button{max-width:100%}}
-</style></head><body>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
+header{background:#285b94;color:white;text-align:center;padding:25px}
+.container{max-width:1100px;margin:20px auto;padding:12px}
+.card{background:white;padding:20px;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 15px #0001}
+h2{color:#285b94}
+label{display:block;margin:12px 0 6px;font-weight:bold}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccd5df;border-radius:8px;font-size:16px}
+textarea{min-height:100px}
+button{padding:12px 18px;background:#285b94;color:white;border:0;border-radius:8px;margin-top:12px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.secondary{background:#64748b}
+.danger{background:#c0392b}
+.green{background:#16834a}
+.hidden{display:none!important}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.message{margin-top:10px;font-weight:bold;overflow-wrap:anywhere}
+.success{color:green}
+.error{color:red}
+.table-wrap{overflow:auto}
+table{width:100%;min-width:750px;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:10px;text-align:left}
+th{background:#285b94;color:white}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;padding:10px}
+@media(max-width:650px){
+.grid{grid-template-columns:1fr}
+.container{padding:8px}
+button{width:100%}
+}
+</style>
+</head>
+
+<body>
 <header><h1>ГАМШГААС ХАМГААЛАХ СУРГАЛТЫН СИСТЕМ</h1><p>Тайлан бүртгэл, мэдээллийн нэгдсэн систем</p></header>
 <div class="container">
 <section id="loginSection" class="card"><h2>Системд нэвтрэх</h2><label>И-мэйл</label><input id="email" type="email" autocomplete="username"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn">Нэвтрэх</button><div id="loginStatus" class="message"></div></section>
@@ -90,11 +115,10 @@ async function openFile(path){
     const at=objectPath.indexOf(marker);
     if(at>=0){
       objectPath=objectPath.slice(at+marker.length);
-     
-objectPath=objectPath.replace(/^sign\/training-files\//,"").replace(/^public\/training-files\//,"").split("?")[0];
-}
-}
-objectPath=objectPath.replace(/^\/+/,"");
+      objectPath=objectPath.replace(/^sign\/training-files\//,"").replace(/^public\/training-files\//,"").split("?")[0];
+    }
+  }
+  objectPath=objectPath.replace(/^\/+/, "");
   // URL encoded path бол decode хийх
   try{objectPath=decodeURIComponent(objectPath)}catch(_){}
   if(objectPath.startsWith("training-files/"))objectPath=objectPath.slice("training-files/".length);
@@ -130,4 +154,4 @@ function closeFileModal(){$("fileModal").classList.add("hidden");$("filePreview"
 async function loadStatistics(){let year=+$("statYear").value,prov=$("statProvince").value;if(!year)return;let q=sb.from("training_records").select("training_type,participant_total,male_count,female_count,province_id,training_date").eq("review_status","Баталгаажсан").gte("training_date",year+"-01-01").lte("training_date",year+"-12-31");if(prov)q=q.eq("province_id",+prov);let x=await q;if(x.error)return message("statStatus",x.error.message,"error");let rows=trainingTypes.map(t=>{let a=(x.data||[]).filter(v=>v.training_type===t);return{t,n:a.length,p:a.reduce((s,v)=>s+v.participant_total,0),m:a.reduce((s,v)=>s+v.male_count,0),f:a.reduce((s,v)=>s+v.female_count,0)}});$("statTable").innerHTML=rows.map((v,i)=>`<tr><td>${i+1}</td><td>${v.t}</td><td>${v.n}</td><td>${v.p}</td><td>${v.m}</td><td>${v.f}</td></tr>`).join("");let n=rows.reduce((s,v)=>s+v.n,0),p=rows.reduce((s,v)=>s+v.p,0),m=rows.reduce((s,v)=>s+v.m,0),f=rows.reduce((s,v)=>s+v.f,0);$("statTotals").innerHTML=`<h3>Нийт ${n} сургалт | ${p} хүн (Э ${m}, Эм ${f})</h3>`;message("statStatus","Баталгаажсан сургалтын дүн.","success")}
 $("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()};
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
-</script></body></html>
+</script></div></body></html>
