@@ -3,6 +3,9 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Гамшгаас хамгаалах сургалтын систем</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
 header{background:#285b94;color:white;text-align:center;padding:20px}.container{max-width:1100px;margin:20px auto;padding:12px}
@@ -26,7 +29,7 @@ button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8
 <!-- СУРГАЛТЫН ТӨЛӨВЛӨГӨӨ УДИРДАХ -->
 <!-- УДИРДЛАГЫН DASHBOARD -->
 <section id="dashboardBox" class="card hidden">
- <div class="toolbar"><h2>Удирдлагын Dashboard</h2><button id="dashRefresh" class="secondary">Шинэчлэх</button></div>
+ <div class="toolbar"><h2>Удирдлагын Dashboard</h2><div><button id="dashRefresh" class="secondary">Шинэчлэх</button><button id="exportExcel" class="green">Excel татах</button><button id="exportPdf" class="danger">PDF татах</button></div></div>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
   <div class="card"><small>Нийт сургалт</small><h2 id="dashTrainings">—</h2></div>
   <div class="card"><small>Нийт хамрагдсан хүн</small><h2 id="dashPeople">—</h2></div>
@@ -161,6 +164,28 @@ if (profile.role === "admin") {
 $("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(profile.role==="admin")await loadDashboard();if(isReviewer())await loadReviewQueue()}
 
 function dashRange(y,p){if(p==="q1")return [y+"-01-01",y+"-03-31"];if(p==="q2")return [y+"-04-01",y+"-06-30"];if(p==="q3")return [y+"-07-01",y+"-09-30"];if(p==="q4")return [y+"-10-01",y+"-12-31"];if(p==="h1")return [y+"-01-01",y+"-06-30"];if(p==="h2")return [y+"-07-01",y+"-12-31"];return [y+"-01-01",y+"-12-31"]}
+let dashboardExportData=null;
+function exportDashboardExcel(){
+ if(!dashboardExportData){message("dashStatus","Эхлээд Dashboard-ийг шинэчилнэ үү.","error");return}
+ if(!window.XLSX){message("dashStatus","Excel сан ачаалагдсангүй. Интернетээ шалгана уу.","error");return}
+ const d=dashboardExportData,wb=XLSX.utils.book_new();
+ const summary=[["Удирдлагын Dashboard"],["Тайлангийн он",d.year],["Хугацаа",d.period],[],["Үзүүлэлт","Дүн"],["Нийт сургалт",d.summary.totalTrainings],["Нийт хамрагдсан хүн",d.summary.totalPeople],["Баталгаажсан сургалт",d.summary.approved],["Хүлээгдэж буй",d.summary.pending],["Тайлан ирүүлсэн нэгж",`${d.summary.submittedUnits}/${d.summary.totalUnits}`],["Тайлан ирүүлэлтийн хувь",d.summary.submissionRate.toFixed(1)+"%"],["Нийт тайлан",d.summary.totalReports]];
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),"Нэгдсэн дүн");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d.provinceRows.map(x=>({"Аймаг":x.name,"Бодит сургалт":x.actual,"Хамрагдсан хүн":x.people,"Төлөвлөсөн сургалт":x.planned,"Биелэлт (%)":x.pct===null?"":Number(x.pct.toFixed(1))}))),"Сургалтын гүйцэтгэл");
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(d.comparison.map((x,i)=>({"Эрэмбэ":i+1,"Аймаг/Нийслэл":x.name,"Тайлан":x.reports,"Сургалт":x.trainings,"Тайлан ирүүлсэн":x.hasReport?"Тийм":"Үгүй"}))),"Тайлангийн харьцуулалт");
+ XLSX.writeFile(wb,`Dashboard_${d.year}.xlsx`);message("dashStatus","Excel файл татагдлаа.","success");
+}
+function exportDashboardPdf(){
+ if(!dashboardExportData){message("dashStatus","Эхлээд Dashboard-ийг шинэчилнэ үү.","error");return}
+ if(!window.jspdf||!window.jspdf.jsPDF){message("dashStatus","PDF сан ачаалагдсангүй. Интернетээ шалгана уу.","error");return}
+ const d=dashboardExportData,doc=new window.jspdf.jsPDF({orientation:"landscape"});
+ doc.setFontSize(15);doc.text("Training System Dashboard",14,15);doc.setFontSize(10);doc.text(`Year: ${d.year} | Period: ${d.period}`,14,22);
+ doc.autoTable({startY:27,head:[["Metric","Value"]],body:[["Total trainings",d.summary.totalTrainings],["Participants",d.summary.totalPeople],["Approved",d.summary.approved],["Pending",d.summary.pending],["Reports submitted units",`${d.summary.submittedUnits}/${d.summary.totalUnits}`],["Submission rate",d.summary.submissionRate.toFixed(1)+"%"],["Total reports",d.summary.totalReports]]});
+ doc.autoTable({startY:doc.lastAutoTable.finalY+8,head:[["Province","Trainings","People","Plan","Completion %"]],body:d.provinceRows.map(x=>[x.name,x.actual,x.people,x.planned,x.pct===null?"—":x.pct.toFixed(1)+"%"]),styles:{fontSize:8}});
+ doc.addPage();doc.text("Province report comparison",14,15);
+ doc.autoTable({startY:20,head:[["Rank","Province","Reports","Trainings","Submitted"]],body:d.comparison.map((x,i)=>[i+1,x.name,x.reports,x.trainings,x.hasReport?"Yes":"No"]),styles:{fontSize:8}});
+ doc.save(`Dashboard_${d.year}.pdf`);message("dashStatus","PDF файл татагдлаа.","success");
+}
 async function loadDashboard(){
  if(profile.role!=="admin")return;
  const y=Number($("dashYear").value||new Date().getFullYear()),[from,to]=dashRange(y,$("dashPeriod").value);
@@ -189,6 +214,7 @@ async function loadDashboard(){
   const reportCounts={},trainingCounts={};submitted.forEach(r=>reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1);all.forEach(r=>trainingCounts[r.province_id]=(trainingCounts[r.province_id]||0)+1);
   const comparison=(prov.data||[]).map(p=>({id:p.id,name:p.name,reports:reportCounts[p.id]||0,trainings:trainingCounts[p.id]||0,hasReport:(reportCounts[p.id]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
   const submittedUnits=comparison.filter(r=>r.hasReport).length,rate=comparison.length?submittedUnits/comparison.length*100:0;
+  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople:all.reduce((s,r)=>s+Number(r.participant_total||0),0),approved:approved.length,pending:pending.length,submittedUnits,totalUnits:comparison.length,submissionRate:rate,totalReports:submitted.length},provinceRows:rows,comparison};
   $("cmpSubmitted").textContent=submittedUnits+" / "+comparison.length;$('cmpRate').textContent=rate.toFixed(1)+"%";$('cmpReports').textContent=submitted.length.toLocaleString();$('cmpTrainings').textContent=all.length.toLocaleString();
   const maxReports=Math.max(1,...comparison.map(r=>r.reports));$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
   $('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
@@ -599,7 +625,7 @@ async function loadStatistics(){
   message("statStatus",`Баталгаажсан сургалтын дүн. Нийт ${all.length} бүртгэл тооцлоо.`,"success")
  }catch(e){message("statStatus","Статистикийн алдаа: "+safeError(e),"error")}
 }
-$("dashRefresh").onclick=loadDashboard;$("dashYear").onchange=loadDashboard;$("dashPeriod").onchange=loadDashboard;
+$("dashRefresh").onclick=loadDashboard;$("exportExcel").onclick=exportDashboardExcel;$("exportPdf").onclick=exportDashboardPdf;$("dashYear").onchange=loadDashboard;$("dashPeriod").onchange=loadDashboard;
 $("loginBtn").onclick=login;
 $("planSaveBtn").onclick = savePlan;
 $("planCancelBtn").onclick = cancelPlanEdit;
