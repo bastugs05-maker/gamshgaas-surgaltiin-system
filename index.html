@@ -1,26 +1,50 @@
+
 <!DOCTYPE html>
-<html lang="mn"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Гамшгаас хамгаалах сургалтын систем</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
-header{background:#285b94;color:white;text-align:center;padding:20px}.container{max-width:1100px;margin:20px auto;padding:12px}
-.card{background:white;padding:18px;border-radius:14px;margin-bottom:16px;box-shadow:0 4px 15px #0001}
-h2{color:#285b94}label{display:block;margin:12px 0 6px;font-weight:bold}
-input,select,textarea{width:100%;padding:11px;border:1px solid #ccd5df;border-radius:8px;font-size:16px}textarea{min-height:90px}
-button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8px;margin:5px 3px;font-weight:bold;cursor:pointer}
-.secondary{background:#64748b}.danger{background:#c0392b}.green{background:#16834a}.hidden{display:none!important}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.message{margin-top:10px;font-weight:bold;overflow-wrap:anywhere}.success{color:green}.error{color:red}
-.table-wrap{overflow:auto}table{width:100%;min-width:750px;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:9px;text-align:left}th{background:#285b94;color:white}
-.preview{width:100%;height:70vh;border:1px solid #ccd5df;border-radius:8px;background:#f8fafc}
-@media(max-width:650px){.grid{grid-template-columns:1fr}.container{padding:8px}button{max-width:100%}}
-</style></head><body>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
+header{background:#285b94;color:white;text-align:center;padding:25px}
+.container{max-width:1100px;margin:20px auto;padding:12px}
+.card{background:white;padding:20px;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 15px #0001}
+h2{color:#285b94}
+label{display:block;margin:12px 0 6px;font-weight:bold}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccd5df;border-radius:8px;font-size:16px}
+textarea{min-height:100px}
+button{padding:12px 18px;background:#285b94;color:white;border:0;border-radius:8px;margin-top:12px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.secondary{background:#64748b}
+.danger{background:#c0392b}
+.green{background:#16834a}
+.hidden{display:none!important}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.message{margin-top:10px;font-weight:bold;overflow-wrap:anywhere}
+.success{color:green}
+.error{color:red}
+.table-wrap{overflow:auto}
+table{width:100%;min-width:750px;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:10px;text-align:left}
+th{background:#285b94;color:white}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#eee;padding:10px}
+@media(max-width:650px){
+.grid{grid-template-columns:1fr}
+.container{padding:8px}
+button{width:100%}
+}
+</style>
+</head>
+
+<body>
 <header><h1>ГАМШГААС ХАМГААЛАХ СУРГАЛТЫН СИСТЕМ</h1><p>Тайлан бүртгэл, мэдээллийн нэгдсэн систем</p></header>
 <div class="container">
-<section id="loginSection" class="card"><h2>Системд нэвтрэх</h2><label>Байгууллагын нэвтрэх нэр</label><input id="email" type="text" autocomplete="username" placeholder="Жишээ: Ara1"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn">Нэвтрэх</button><div id="loginStatus" class="message"></div></section>
-<section id="changePasswordSection" class="card hidden"><h2>Анхны нууц үг солих</h2><p>Аюулгүй байдлын үүднээс шинэ нууц үгээ тохируулна уу.</p><label>Шинэ нууц үг (8-аас дээш тэмдэгт)</label><input id="newPassword" type="password" autocomplete="new-password"><label>Шинэ нууц үг давтах</label><input id="newPassword2" type="password" autocomplete="new-password"><button id="changePasswordBtn" class="green">Нууц үг солих</button><div id="changePasswordStatus" class="message"></div></section>
+<section id="loginSection" class="card"><h2>Системд нэвтрэх</h2><label>И-мэйл</label><input id="email" type="email" autocomplete="username"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn">Нэвтрэх</button><div id="loginStatus" class="message"></div><button type="button" id="forgotPasswordBtn" class="secondary">Нууц үг мартсан?</button><div id="recoveryBox" class="card hidden"><h2>Шинэ нууц үг тохируулах</h2><label>Шинэ нууц үг (8-аас дээш тэмдэгт)</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password"><label>Нууц үг давтах</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password"><button type="button" id="updatePasswordBtn">Нууц үг хадгалах</button><div id="recoveryStatus" class="message"></div></div></section>
 <section id="appSection" class="hidden">
 <div class="card toolbar"><h2>Үндсэн хэсэг</h2><div id="userInfo"></div><button id="logoutBtn" class="secondary">Гарах</button></div>
 <section id="adminBox" class="card hidden"><h2>АДМИН — байгууллага</h2><button id="createBtn">30 байгууллага үүсгэх</button><button id="downloadBtn" class="green hidden">CSV татах</button><div id="adminStatus" class="message"></div><pre id="adminResult"></pre></section>
@@ -56,11 +80,34 @@ const $=id=>document.getElementById(id);let sb=null,currentUser=null,profile={},
 const isReviewer=()=>["admin","reviewer"].includes(profile.role);
 function message(id,t,c=""){$(id).textContent=t;$(id).className="message "+c}
 function safeError(e){return e?.message||String(e)}
-const accountMap={"Ara1":"a01@example.org","Bay1":"a02@example.org","Bhn1":"a03@example.org","Bul1":"a04@example.org","Gba1":"a05@example.org","Dar1":"a06@example.org","Dng1":"a07@example.org","Dor1":"a08@example.org","Dmg1":"a09@example.org","Zav1":"a10@example.org","Ovk1":"a11@example.org","Omg1":"a12@example.org","Suh1":"a13@example.org","Sel1":"a14@example.org","Tuv1":"a15@example.org","Uvs1":"a16@example.org","Hov1":"a17@example.org","Huv1":"a18@example.org","Hen1":"a19@example.org","Orh1":"a20@example.org","Gsu1":"a21@example.org"};
-for(let i=1;i<=9;i++){let n=String(i).padStart(2,"0");accountMap["UB"+n+"1"]="ub"+n+"@example.org"}
-async function login(){const username=$("email").value.trim(),password=$("password").value,email=accountMap[username]||username.toLowerCase();if(!username||!password)return message("loginStatus","Нэвтрэх нэр, нууц үгээ оруулна уу.","error");$("loginBtn").disabled=true;message("loginStatus","Нэвтэрч байна...");try{if(!sb)throw Error("Supabase сан ачаалагдсангүй.");let x=await sb.auth.signInWithPassword({email,password});if(x.error)throw x.error;currentUser=x.data.user;if(currentUser.user_metadata?.must_change_password){$("loginSection").classList.add("hidden");$("changePasswordSection").classList.remove("hidden");$("appSection").classList.add("hidden");message("changePasswordStatus","Анхны нууц үгээ солино уу.");return}await showApp()}catch(e){$("loginSection").classList.remove("hidden");$("appSection").classList.add("hidden");message("loginStatus","Алдаа: "+safeError(e),"error")}finally{$("loginBtn").disabled=false}}
-async function changePassword(){let a=$("newPassword").value,b=$("newPassword2").value;if(a.length<8)return message("changePasswordStatus","Нууц үг 8-аас доошгүй тэмдэгт байна.","error");if(a!==b)return message("changePasswordStatus","Нууц үг таарахгүй байна.","error");$("changePasswordBtn").disabled=true;try{let r=await sb.auth.updateUser({password:a,data:{must_change_password:false}});if(r.error)throw r.error;$("changePasswordSection").classList.add("hidden");message("loginStatus","Нууц үг амжилттай солигдлоо.","success");await showApp()}catch(e){message("changePasswordStatus","Алдаа: "+safeError(e),"error")}finally{$("changePasswordBtn").disabled=false}}
-async function logout(){if(sb)await sb.auth.signOut();currentUser=null;profile={};$("changePasswordSection").classList.add("hidden");$("appSection").classList.add("hidden");$("loginSection").classList.remove("hidden");$("password").value="";message("loginStatus","Системээс гарлаа.","success")}
+async function login(){const email=$("email").value.trim(),password=$("password").value;if(!email||!password)return message("loginStatus","И-мэйл, нууц үгээ оруулна уу.","error");$("loginBtn").disabled=true;message("loginStatus","Нэвтэрч байна...");try{if(!sb)throw Error("Supabase сан ачаалагдсангүй.");let x=await sb.auth.signInWithPassword({email,password});if(x.error)throw x.error;currentUser=x.data.user;await showApp()}catch(e){$("loginSection").classList.remove("hidden");$("appSection").classList.add("hidden");message("loginStatus","Алдаа: "+safeError(e),"error")}finally{$("loginBtn").disabled=false}}
+
+async function sendPasswordRecovery(){
+ const email=$("email").value.trim();
+ if(!email)return message("loginStatus","Эхлээд имэйлээ оруулна уу.","error");
+ try{
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+   redirectTo:location.origin+location.pathname
+  });
+  if(error)throw error;
+  message("loginStatus","Нууц үг сэргээх холбоос имэйлээр илгээгдлээ.","success");
+ }catch(e){message("loginStatus","Алдаа: "+safeError(e),"error")}
+}
+async function saveNewPassword(){
+ const p1=$("newPassword").value,p2=$("confirmPassword").value;
+ if(p1.length<8)return message("recoveryStatus","Нууц үг 8-аас дээш тэмдэгттэй байна.","error");
+ if(p1!==p2)return message("recoveryStatus","Нууц үг хоорондоо таарахгүй байна.","error");
+ try{
+  const {error}=await sb.auth.updateUser({password:p1});
+  if(error)throw error;
+  message("recoveryStatus","Нууц үг амжилттай шинэчлэгдлээ.","success");
+  $("recoveryBox").classList.add("hidden");
+  $("password").value="";
+  message("loginStatus","Шинэ нууц үгээр нэвтэрнэ үү.","success");
+  await sb.auth.signOut();
+ }catch(e){message("recoveryStatus","Алдаа: "+safeError(e),"error")}
+}
+async function logout(){if(sb)await sb.auth.signOut();currentUser=null;profile={};$("appSection").classList.add("hidden");$("loginSection").classList.remove("hidden");$("password").value="";message("loginStatus","Системээс гарлаа.","success")}
 async function showApp(){let p=await sb.from("user_profiles").select("*").eq("user_id",currentUser.id).maybeSingle();if(p.error)throw p.error;if(!p.data)throw Error("user_profiles-д эрхийн мэдээлэл алга.");profile=p.data;$("userInfo").textContent=currentUser.email;$("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(isReviewer())await loadReviewQueue()}
 function initYears(){$("reportYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("reportYear").add(new Option(y+" он",y));$("reportMonth").innerHTML="";for(let m=1;m<=12;m++)$("reportMonth").add(new Option(m+"-р сар",m))}
 async function loadProvinces(){let s=$("province");s.innerHTML='<option value="">Аймаг сонгоно уу</option>';let q=sb.from("provinces").select("id,name").order("id");if(profile.role!=="admin"&&profile.province_id)q=q.eq("id",profile.province_id);let x=await q;if(x.error)throw x.error;(x.data||[]).forEach(p=>s.add(new Option(p.name,p.id)));if(profile.province_id){s.value=profile.province_id;await loadUnits()}}
@@ -75,7 +122,7 @@ async function deleteReport(id){if(!confirm("Тайлан устгах уу?"))r
 async function downloadFile(path){let x=await sb.storage.from("training-files").createSignedUrl(path,300);if(x.error)alert(x.error.message);else window.open(x.data.signedUrl,"_blank")}
 async function loadReviewQueue(){let x=await sb.from("reports").select("*").in("review_status",["Илгээсэн","Хянаж байна","Засварласан"]).order("submitted_at",{ascending:true});if(x.error)return message("reviewStatus",x.error.message,"error");$("reviewTable").innerHTML="";for(let r of x.data||[]){let [p,u]=await Promise.all([sb.from("provinces").select("name").eq("id",r.province_id).maybeSingle(),sb.from("units").select("name").eq("id",r.unit_id).maybeSingle()]);let tr=document.createElement("tr");[((p.data?.name)||"")+" / "+((u.data?.name)||""),r.report_type,periodText(r),r.title,r.report_file?"Хавсаргасан":"—",r.review_status].forEach(v=>{let td=document.createElement("td");td.textContent=v||"";tr.appendChild(td)});let td=document.createElement("td");if(r.report_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.report_file);td.appendChild(b)};[["Батлах","Баталгаажсан","green"],["Буцаах","Буцаасан","danger"],["Хяналтад авах","Хянаж байна","secondary"]].forEach(([l,s,c])=>{let b=document.createElement("button");b.textContent=l;b.className=c;b.onclick=()=>reviewReport(r.id,s);td.appendChild(b)});tr.appendChild(td);$("reviewTable").appendChild(tr)}message("reviewStatus",(x.data||[]).length+" тайлан хяналтад байна.","success")}
 async function reviewReport(id,status){let c=$("reviewComment").value.trim();if(status==="Буцаасан"&&!c)return alert("Буцаах шалтгаан бичнэ үү");if(!confirm(status+" төлөвт шилжүүлэх үү?"))return;let x=await sb.from("reports").update({review_status:status,review_comment:status==="Баталгаажсан"?"":c,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()}).eq("id",id);if(x.error)return message("reviewStatus",x.error.message,"error");$("reviewComment").value="";await loadReviewQueue();await loadReports()}
-async function createInstitutions(){if(profile.role!=="admin")return alert("Админ эрх шаардлагатай");if(!confirm("30 байгууллага үүсгэх үү?"))return;$("createBtn").disabled=true;try{let x=await sb.functions.invoke("super-handler",{body:{action:"create-organizations"}});if(x.error)throw x.error;if(x.data.error)throw Error(JSON.stringify(x.data));adminData=x.data;$("adminResult").textContent=JSON.stringify(x.data,null,2);message("adminStatus",x.data.message||"Дууслаа","success");$("downloadBtn").classList.remove("hidden")}catch(e){message("adminStatus",safeError(e),"error")}finally{$("createBtn").disabled=false}}
+async function createInstitutions(){if(profile.role!=="admin")return alert("Админ эрх шаардлагатай");if(!confirm("30 байгууллага үүсгэх үү?"))return;$("createBtn").disabled=true;try{let x=await sb.functions.invoke("super-handler",{body:{}});if(x.error)throw x.error;if(x.data.error)throw Error(JSON.stringify(x.data));adminData=x.data;$("adminResult").textContent=JSON.stringify(x.data,null,2);message("adminStatus",x.data.message||"Дууслаа","success");$("downloadBtn").classList.remove("hidden")}catch(e){message("adminStatus",safeError(e),"error")}finally{$("createBtn").disabled=false}}
 function downloadCSV(){if(!adminData?.results)return;let rows=[["Код","Байгууллага","Email","Нууц үг","Төлөв","Алдаа"],...adminData.results.map(x=>[x.code,x.name,x.email,x.password,x.status,x.error])];let csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(",")).join("\r\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="30_baiguullaga.csv";a.click()}
 const trainingTypes=["Гамшгаас хамгаалах иж бүрэн сургууль","Гамшгаас хамгаалах Команд штабын сургууль","Удирдах албан тушаалтны","Сургуулийн ахлах ангийн сурагчдын","Сургуулийн дунд ангийн сурагчдын","Сургуулийн бага ангийн сурагчдын","Сургуулийн өмнөх боловсролын байгууллага","Гамшгаас хамгаалах алба, мэргэжлийн анги","Их, дээд сургууль, МСҮТ, коллежийн","Төрийн захиргаа болон хуулийн этгээдийн","Цэргийн дүйцүүлэх албаны","Сайн дурын иргэн, бүлгийн","Иргэдийн","Хөгжлийн бэрхшээлтэй иргэдийн"];
 function fillTrainingTypes(){if($("trType").options.length===0)trainingTypes.forEach(t=>$("trType").add(new Option(t,t)))}
@@ -83,15 +130,62 @@ async function loadTrainingLocations(){let x=await sb.from("provinces").select("
 async function loadTrainingUnits(){let pid=$("trProvince").value;$("trUnit").innerHTML='<option value="">Сум сонгоно уу</option>';if(!pid)return;let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");if(profile.unit_id)q=q.eq("id",profile.unit_id);let x=await q;if(x.error)throw x.error;(x.data||[]).forEach(u=>$("trUnit").add(new Option(u.name,u.id)));if(profile.unit_id)$("trUnit").value=profile.unit_id}
 async function saveTraining(){let pid=$("trProvince").value,uid=$("trUnit").value,date=$("trDate").value,total=+$("trTotal").value,m=+$("trMale").value,f=+$("trFemale").value,topic=$("trTopic").value==="Бусад"?$("trTopicOther").value.trim():$("trTopic").value;if(!pid||!uid||!date||!$("trType").value||!$("trOrgName").value.trim()||!topic)return message("trStatus","Шаардлагатай талбаруудыг бөглөнө.","error");if(m+f>total)return message("trStatus","Эрэгтэй + эмэгтэй нийтээс их байна.","error");try{let path=null,file=$("trFile").files[0];if(file){if(file.size>10*1024*1024)throw Error("Файл 10MB-аас их");path=currentUser.id+"/training/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");let up=await sb.storage.from("training-files").upload(path,file);if(up.error)throw up.error}let x=await sb.from("training_records").insert({created_by:currentUser.id,province_id:+pid,unit_id:+uid,training_date:date,training_type:$("trType").value,organization_type:$("trOrgType").value,organization_name:$("trOrgName").value.trim(),participant_total:total,male_count:m,female_count:f,training_format:$("trFormat").value,training_topic:topic,certificate_file:path,review_status:"Илгээсэн",submitted_at:new Date().toISOString()});if(x.error)throw x.error;message("trStatus","Бүртгэл илгээгдлээ.","success");$("trOrgName").value="";$("trFile").value="";await loadTrainingRecords();await loadStatistics()}catch(e){message("trStatus","Алдаа: "+safeError(e),"error")}}
 async function loadTrainingRecords(){if(!currentUser)return;message("trListStatus","Сургалтын бүртгэл ачаалж байна...");let q=sb.from("training_records").select("*").order("created_at",{ascending:false});if(!isReviewer())q=q.eq("created_by",currentUser.id);let x=await q;if(x.error)return message("trListStatus","Алдаа: "+x.error.message,"error");trainingRows=x.data||[];let pids=[...new Set(trainingRows.map(r=>r.province_id))],uids=[...new Set(trainingRows.map(r=>r.unit_id))],pm={},um={};if(pids.length){let a=await sb.from("provinces").select("id,name").in("id",pids);(a.data||[]).forEach(v=>pm[v.id]=v.name)}if(uids.length){let a=await sb.from("units").select("id,name").in("id",uids);(a.data||[]).forEach(v=>um[v.id]=v.name)}$("trListTable").innerHTML="";trainingRows.forEach((r,i)=>{let tr=document.createElement("tr");[i+1,r.training_date,(pm[r.province_id]||"")+" / "+(um[r.unit_id]||""),r.training_type,r.organization_name,r.participant_total,r.review_status||"—"].forEach(v=>{let td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});let td=document.createElement("td");if(r.certificate_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.certificate_file);td.appendChild(b)}else td.textContent="Хавсаргаагүй";tr.appendChild(td);$("trListTable").appendChild(tr)});message("trListStatus","Нийт "+trainingRows.length+" бүртгэл.","success")}
-async function openFile(path){try{if(!path)throw Error("Файлын зам хоосон байна.");let x=await sb.storage.from("training-files").createSignedUrl(path,600);if(x.error)throw x.error;activeFileUrl=x.data.signedUrl;activeFileName=path.split("/").pop()||"file";let ext=activeFileName.split(".").pop().toLowerCase();$("fileModalTitle").textContent=activeFileName;$("filePreview").innerHTML="";$("fileModalStatus").textContent="";
-if(["pdf"].includes(ext)){$("filePreview").innerHTML='<iframe class="preview" title="PDF preview"></iframe>';$("filePreview").firstChild.src=activeFileUrl}
-else if(["jpg","jpeg","png","webp"].includes(ext)){$("filePreview").innerHTML='<img style="max-width:100%;max-height:68vh;display:block;margin:auto" alt="Баталгааны зураг">';$("filePreview").firstChild.src=activeFileUrl}
-else if(["doc","docx"].includes(ext)){$("filePreview").innerHTML='<div style="padding:20px"><p>Word файлыг браузер дотор шууд үзүүлэхгүй. Доорх <b>Татах</b> товчоор татаж Word/WPS Office-оор нээнэ.</p><p>Татсан файл: '+activeFileName.replace(/[<>&"]/g,"")+'</p></div>'}
-else {$("filePreview").textContent="Энэ файлын төрлийг урьдчилан харах боломжгүй. Татаж нээнэ үү."}
-$("fileModal").classList.remove("hidden")}catch(e){alert("Файл нээхэд алдаа: "+safeError(e))}}
+async function openFile(path){
+ try{
+  if(!path)throw Error("Файлын зам хоосон байна.");
+  // DB-д storage path хадгалсан байх ёстой: user-id/training/filename.ext
+  // URL бүтнээр хадгалагдсан бол bucket доторх object path болгон салгана.
+  let objectPath=String(path).trim();
+  if(objectPath.startsWith("http")){
+    const marker="/storage/v1/object/";
+    const at=objectPath.indexOf(marker);
+    if(at>=0){
+      objectPath=objectPath.slice(at+marker.length);
+      objectPath=objectPath.replace(/^sign\/training-files\//,"").replace(/^public\/training-files\//,"").split("?")[0];
+    }
+  }
+  objectPath=objectPath.replace(/^\/+/, "");
+  // URL encoded path бол decode хийх
+  try{objectPath=decodeURIComponent(objectPath)}catch(_){}
+  if(objectPath.startsWith("training-files/"))objectPath=objectPath.slice("training-files/".length);
+  if(objectPath.startsWith("sign/training-files/"))objectPath=objectPath.slice("sign/training-files/".length);
+  const fileName=objectPath.split("/").pop()||"file";
+  let signedUrl="";
+  if(String(path).trim().startsWith("http") && String(path).includes("/object/sign/")){
+    signedUrl=String(path).trim();
+  }else{
+    const x=await sb.storage.from("training-files").createSignedUrl(objectPath,3600);
+    if(x.error)throw new Error("Storage path олдсонгүй: "+objectPath+" — "+x.error.message);
+    signedUrl=x.data.signedUrl;
+  }
+  activeFileUrl=signedUrl;activeFileName=fileName;
+  const ext=fileName.split(".").pop().toLowerCase();
+  $("fileModalTitle").textContent=fileName;$("filePreview").innerHTML="";$("fileModalStatus").textContent="";
+  if(ext==="pdf"){
+    $("filePreview").innerHTML='<iframe class="preview" title="PDF preview" style="width:100%;height:75vh;border:0"></iframe>';
+    $("filePreview").firstChild.src=signedUrl;
+  }else if(["jpg","jpeg","png","webp","gif"].includes(ext)){
+    $("filePreview").innerHTML='<img style="max-width:100%;max-height:75vh;display:block;margin:auto" alt="Баталгааны зураг">';
+    $("filePreview").firstChild.src=signedUrl;
+  }else if(["doc","docx","xls","xlsx","ppt","pptx"].includes(ext)){
+    $("filePreview").innerHTML='<div style="padding:20px"><h3>Office файл</h3><p>Word/Excel/PowerPoint файлыг браузер дотор шууд үзүүлэхгүй. <b>Татах</b> товчоор татаж Word/WPS/Excel-ээр нээнэ.</p></div>';
+  }else{
+    $("filePreview").textContent="Энэ файлыг браузер урьдчилан үзүүлэхгүй. Татаж нээнэ үү.";
+  }
+  $("fileModal").classList.remove("hidden");
+ }catch(e){alert("Файл нээхэд алдаа: "+safeError(e))}
+}
 function downloadActiveFile(){if(!activeFileUrl)return;let a=document.createElement("a");a.href=activeFileUrl;a.download=activeFileName;a.target="_blank";document.body.appendChild(a);a.click();a.remove()}
 function closeFileModal(){$("fileModal").classList.add("hidden");$("filePreview").innerHTML="";activeFileUrl=""}
 async function loadStatistics(){let year=+$("statYear").value,prov=$("statProvince").value;if(!year)return;let q=sb.from("training_records").select("training_type,participant_total,male_count,female_count,province_id,training_date").eq("review_status","Баталгаажсан").gte("training_date",year+"-01-01").lte("training_date",year+"-12-31");if(prov)q=q.eq("province_id",+prov);let x=await q;if(x.error)return message("statStatus",x.error.message,"error");let rows=trainingTypes.map(t=>{let a=(x.data||[]).filter(v=>v.training_type===t);return{t,n:a.length,p:a.reduce((s,v)=>s+v.participant_total,0),m:a.reduce((s,v)=>s+v.male_count,0),f:a.reduce((s,v)=>s+v.female_count,0)}});$("statTable").innerHTML=rows.map((v,i)=>`<tr><td>${i+1}</td><td>${v.t}</td><td>${v.n}</td><td>${v.p}</td><td>${v.m}</td><td>${v.f}</td></tr>`).join("");let n=rows.reduce((s,v)=>s+v.n,0),p=rows.reduce((s,v)=>s+v.p,0),m=rows.reduce((s,v)=>s+v.m,0),f=rows.reduce((s,v)=>s+v.f,0);$("statTotals").innerHTML=`<h3>Нийт ${n} сургалт | ${p} хүн (Э ${m}, Эм ${f})</h3>`;message("statStatus","Баталгаажсан сургалтын дүн.","success")}
-$("loginBtn").onclick=login;$("changePasswordBtn").onclick=changePassword;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()};
+$("loginBtn").onclick=login;$("forgotPasswordBtn").onclick=sendPasswordRecovery;$("updatePasswordBtn").onclick=saveNewPassword;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()};
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==="PASSWORD_RECOVERY"){
+  $("loginSection").classList.remove("hidden");
+  $("appSection").classList.add("hidden");
+  $("recoveryBox").classList.remove("hidden");
+  message("loginStatus","Шинэ нууц үгээ тохируулна уу.","success");
+ }
+});
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
-</script></body></html>
+</script></div></body></html>
