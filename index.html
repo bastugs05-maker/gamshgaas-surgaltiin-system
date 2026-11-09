@@ -79,12 +79,51 @@ async function loadTrainingLocations(){let x=await sb.from("provinces").select("
 async function loadTrainingUnits(){let pid=$("trProvince").value;$("trUnit").innerHTML='<option value="">Сум сонгоно уу</option>';if(!pid)return;let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");if(profile.unit_id)q=q.eq("id",profile.unit_id);let x=await q;if(x.error)throw x.error;(x.data||[]).forEach(u=>$("trUnit").add(new Option(u.name,u.id)));if(profile.unit_id)$("trUnit").value=profile.unit_id}
 async function saveTraining(){let pid=$("trProvince").value,uid=$("trUnit").value,date=$("trDate").value,total=+$("trTotal").value,m=+$("trMale").value,f=+$("trFemale").value,topic=$("trTopic").value==="Бусад"?$("trTopicOther").value.trim():$("trTopic").value;if(!pid||!uid||!date||!$("trType").value||!$("trOrgName").value.trim()||!topic)return message("trStatus","Шаардлагатай талбаруудыг бөглөнө.","error");if(m+f>total)return message("trStatus","Эрэгтэй + эмэгтэй нийтээс их байна.","error");try{let path=null,file=$("trFile").files[0];if(file){if(file.size>10*1024*1024)throw Error("Файл 10MB-аас их");path=currentUser.id+"/training/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");let up=await sb.storage.from("training-files").upload(path,file);if(up.error)throw up.error}let x=await sb.from("training_records").insert({created_by:currentUser.id,province_id:+pid,unit_id:+uid,training_date:date,training_type:$("trType").value,organization_type:$("trOrgType").value,organization_name:$("trOrgName").value.trim(),participant_total:total,male_count:m,female_count:f,training_format:$("trFormat").value,training_topic:topic,certificate_file:path,review_status:"Илгээсэн",submitted_at:new Date().toISOString()});if(x.error)throw x.error;message("trStatus","Бүртгэл илгээгдлээ.","success");$("trOrgName").value="";$("trFile").value="";await loadTrainingRecords();await loadStatistics()}catch(e){message("trStatus","Алдаа: "+safeError(e),"error")}}
 async function loadTrainingRecords(){if(!currentUser)return;message("trListStatus","Сургалтын бүртгэл ачаалж байна...");let q=sb.from("training_records").select("*").order("created_at",{ascending:false});if(!isReviewer())q=q.eq("created_by",currentUser.id);let x=await q;if(x.error)return message("trListStatus","Алдаа: "+x.error.message,"error");trainingRows=x.data||[];let pids=[...new Set(trainingRows.map(r=>r.province_id))],uids=[...new Set(trainingRows.map(r=>r.unit_id))],pm={},um={};if(pids.length){let a=await sb.from("provinces").select("id,name").in("id",pids);(a.data||[]).forEach(v=>pm[v.id]=v.name)}if(uids.length){let a=await sb.from("units").select("id,name").in("id",uids);(a.data||[]).forEach(v=>um[v.id]=v.name)}$("trListTable").innerHTML="";trainingRows.forEach((r,i)=>{let tr=document.createElement("tr");[i+1,r.training_date,(pm[r.province_id]||"")+" / "+(um[r.unit_id]||""),r.training_type,r.organization_name,r.participant_total,r.review_status||"—"].forEach(v=>{let td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});let td=document.createElement("td");if(r.certificate_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.certificate_file);td.appendChild(b)}else td.textContent="Хавсаргаагүй";tr.appendChild(td);$("trListTable").appendChild(tr)});message("trListStatus","Нийт "+trainingRows.length+" бүртгэл.","success")}
-async function openFile(path){try{if(!path)throw Error("Файлын зам хоосон байна.");let x=await sb.storage.from("training-files").createSignedUrl(path,600);if(x.error)throw x.error;activeFileUrl=x.data.signedUrl;activeFileName=path.split("/").pop()||"file";let ext=activeFileName.split(".").pop().toLowerCase();$("fileModalTitle").textContent=activeFileName;$("filePreview").innerHTML="";$("fileModalStatus").textContent="";
-if(["pdf"].includes(ext)){$("filePreview").innerHTML='<iframe class="preview" title="PDF preview"></iframe>';$("filePreview").firstChild.src=activeFileUrl}
-else if(["jpg","jpeg","png","webp"].includes(ext)){$("filePreview").innerHTML='<img style="max-width:100%;max-height:68vh;display:block;margin:auto" alt="Баталгааны зураг">';$("filePreview").firstChild.src=activeFileUrl}
-else if(["doc","docx"].includes(ext)){$("filePreview").innerHTML='<div style="padding:20px"><p>Word файлыг браузер дотор шууд үзүүлэхгүй. Доорх <b>Татах</b> товчоор татаж Word/WPS Office-оор нээнэ.</p><p>Татсан файл: '+activeFileName.replace(/[<>&"]/g,"")+'</p></div>'}
-else {$("filePreview").textContent="Энэ файлын төрлийг урьдчилан харах боломжгүй. Татаж нээнэ үү."}
-$("fileModal").classList.remove("hidden")}catch(e){alert("Файл нээхэд алдаа: "+safeError(e))}}
+async function openFile(path){
+ try{
+  if(!path)throw Error("Файлын зам хоосон байна.");
+  // DB-д storage path хадгалсан байх ёстой: user-id/training/filename.ext
+  // URL бүтнээр хадгалагдсан бол bucket доторх object path болгон салгана.
+  let objectPath=String(path).trim();
+  if(objectPath.startsWith("http")){
+    const marker="/storage/v1/object/";
+    const at=objectPath.indexOf(marker);
+    if(at>=0){
+      objectPath=objectPath.slice(at+marker.length);
+      objectPath=objectPath.replace(/^sign\\/training-files\\//,"").replace(/^public\\/training-files\\//,"").split("?")[0];
+    }
+  }
+  objectPath=objectPath.replace(/^\\/+/, "");
+  // URL encoded path бол decode хийх
+  try{objectPath=decodeURIComponent(objectPath)}catch(_){}
+  if(objectPath.startsWith("training-files/"))objectPath=objectPath.slice("training-files/".length);
+  if(objectPath.startsWith("sign/training-files/"))objectPath=objectPath.slice("sign/training-files/".length);
+  const fileName=objectPath.split("/").pop()||"file";
+  let signedUrl="";
+  if(String(path).trim().startsWith("http") && String(path).includes("/object/sign/")){
+    signedUrl=String(path).trim();
+  }else{
+    const x=await sb.storage.from("training-files").createSignedUrl(objectPath,3600);
+    if(x.error)throw new Error("Storage path олдсонгүй: "+objectPath+" — "+x.error.message);
+    signedUrl=x.data.signedUrl;
+  }
+  activeFileUrl=signedUrl;activeFileName=fileName;
+  const ext=fileName.split(".").pop().toLowerCase();
+  $("fileModalTitle").textContent=fileName;$("filePreview").innerHTML="";$("fileModalStatus").textContent="";
+  if(ext==="pdf"){
+    $("filePreview").innerHTML='<iframe class="preview" title="PDF preview" style="width:100%;height:75vh;border:0"></iframe>';
+    $("filePreview").firstChild.src=signedUrl;
+  }else if(["jpg","jpeg","png","webp","gif"].includes(ext)){
+    $("filePreview").innerHTML='<img style="max-width:100%;max-height:75vh;display:block;margin:auto" alt="Баталгааны зураг">';
+    $("filePreview").firstChild.src=signedUrl;
+  }else if(["doc","docx","xls","xlsx","ppt","pptx"].includes(ext)){
+    $("filePreview").innerHTML='<div style="padding:20px"><h3>Office файл</h3><p>Word/Excel/PowerPoint файлыг браузер дотор шууд үзүүлэхгүй. <b>Татах</b> товчоор татаж Word/WPS/Excel-ээр нээнэ.</p></div>';
+  }else{
+    $("filePreview").textContent="Энэ файлыг браузер урьдчилан үзүүлэхгүй. Татаж нээнэ үү.";
+  }
+  $("fileModal").classList.remove("hidden");
+ }catch(e){alert("Файл нээхэд алдаа: "+safeError(e))}
+}
 function downloadActiveFile(){if(!activeFileUrl)return;let a=document.createElement("a");a.href=activeFileUrl;a.download=activeFileName;a.target="_blank";document.body.appendChild(a);a.click();a.remove()}
 function closeFileModal(){$("fileModal").classList.add("hidden");$("filePreview").innerHTML="";activeFileUrl=""}
 async function loadStatistics(){let year=+$("statYear").value,prov=$("statProvince").value;if(!year)return;let q=sb.from("training_records").select("training_type,participant_total,male_count,female_count,province_id,training_date").eq("review_status","Баталгаажсан").gte("training_date",year+"-01-01").lte("training_date",year+"-12-31");if(prov)q=q.eq("province_id",+prov);let x=await q;if(x.error)return message("statStatus",x.error.message,"error");let rows=trainingTypes.map(t=>{let a=(x.data||[]).filter(v=>v.training_type===t);return{t,n:a.length,p:a.reduce((s,v)=>s+v.participant_total,0),m:a.reduce((s,v)=>s+v.male_count,0),f:a.reduce((s,v)=>s+v.female_count,0)}});$("statTable").innerHTML=rows.map((v,i)=>`<tr><td>${i+1}</td><td>${v.t}</td><td>${v.n}</td><td>${v.p}</td><td>${v.m}</td><td>${v.f}</td></tr>`).join("");let n=rows.reduce((s,v)=>s+v.n,0),p=rows.reduce((s,v)=>s+v.p,0),m=rows.reduce((s,v)=>s+v.m,0),f=rows.reduce((s,v)=>s+v.f,0);$("statTotals").innerHTML=`<h3>Нийт ${n} сургалт | ${p} хүн (Э ${m}, Эм ${f})</h3>`;message("statStatus","Баталгаажсан сургалтын дүн.","success")}
