@@ -600,7 +600,7 @@ async function loadStatistics(){
  }catch(e){message("statStatus","Статистикийн алдаа: "+safeError(e),"error")}
 }
 $("dashRefresh").onclick=loadDashboard;$("dashYear").onchange=loadDashboard;$("dashPeriod").onchange=loadDashboard;
-document.getElementById("loginBtn").onclick=login;
+$("loginBtn").onclick=login;
 $("planSaveBtn").onclick = savePlan;
 $("planCancelBtn").onclick = cancelPlanEdit;
 $("planRefreshBtn").onclick = loadPlans;
