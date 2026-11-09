@@ -600,7 +600,7 @@ async function loadStatistics(){
  }catch(e){message("statStatus","Статистикийн алдаа: "+safeError(e),"error")}
 }
 $("dashRefresh").onclick=loadDashboard;$("dashYear").onchange=loadDashboard;$("dashPeriod").onchange=loadDashboard;
-("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()}; 
+$("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()}; 
 $("planSaveBtn").onclick = savePlan;
 $("planCancelBtn").onclick = cancelPlanEdit;
 $("planRefreshBtn").onclick = loadPlans;
