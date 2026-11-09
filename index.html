@@ -179,13 +179,19 @@ function downloadActiveFile(){if(!activeFileUrl)return;let a=document.createElem
 function closeFileModal(){$("fileModal").classList.add("hidden");$("filePreview").innerHTML="";activeFileUrl=""}
 async function loadStatistics(){let year=+$("statYear").value,prov=$("statProvince").value;if(!year)return;let q=sb.from("training_records").select("training_type,participant_total,male_count,female_count,province_id,training_date").eq("review_status","Баталгаажсан").gte("training_date",year+"-01-01").lte("training_date",year+"-12-31");if(prov)q=q.eq("province_id",+prov);let x=await q;if(x.error)return message("statStatus",x.error.message,"error");let rows=trainingTypes.map(t=>{let a=(x.data||[]).filter(v=>v.training_type===t);return{t,n:a.length,p:a.reduce((s,v)=>s+v.participant_total,0),m:a.reduce((s,v)=>s+v.male_count,0),f:a.reduce((s,v)=>s+v.female_count,0)}});$("statTable").innerHTML=rows.map((v,i)=>`<tr><td>${i+1}</td><td>${v.t}</td><td>${v.n}</td><td>${v.p}</td><td>${v.m}</td><td>${v.f}</td></tr>`).join("");let n=rows.reduce((s,v)=>s+v.n,0),p=rows.reduce((s,v)=>s+v.p,0),m=rows.reduce((s,v)=>s+v.m,0),f=rows.reduce((s,v)=>s+v.f,0);$("statTotals").innerHTML=`<h3>Нийт ${n} сургалт | ${p} хүн (Э ${m}, Эм ${f})</h3>`;message("statStatus","Баталгаажсан сургалтын дүн.","success")}
 $("loginBtn").onclick=login;$("forgotPasswordBtn").onclick=sendPasswordRecovery;$("updatePasswordBtn").onclick=saveNewPassword;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()};
-sb.auth.onAuthStateChange((event,session)=>{
- if(event==="PASSWORD_RECOVERY"){
-  $("loginSection").classList.remove("hidden");
-  $("appSection").classList.add("hidden");
-  $("recoveryBox").classList.remove("hidden");
-  message("loginStatus","Шинэ нууц үгээ тохируулна уу.","success");
- }
-});
-async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
+async function init(){try{
+ if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");
+ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+ sb.auth.onAuthStateChange((event,session)=>{
+  if(event==="PASSWORD_RECOVERY"){
+   $("loginSection").classList.remove("hidden");
+   $("appSection").classList.add("hidden");
+   $("recoveryBox").classList.remove("hidden");
+   message("loginStatus","Шинэ нууц үгээ тохируулна уу.","success");
+  }
+ });
+ let x=await sb.auth.getSession();
+ if(x.error)throw x.error;
+ if(x.data.session){currentUser=x.data.session.user;await showApp()}
+ }catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
 </script></div></body></html>
