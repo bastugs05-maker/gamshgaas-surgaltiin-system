@@ -104,8 +104,47 @@ async function deleteReport(id){
 async function downloadFile(path){let x=await sb.storage.from("training-files").createSignedUrl(path,300);if(x.error)alert(x.error.message);else window.open(x.data.signedUrl,"_blank")}
 async function loadReviewQueue(){let x=await sb.from("reports").select("*").in("review_status",["Илгээсэн","Хянаж байна","Засварласан"]).order("submitted_at",{ascending:true});if(x.error)return message("reviewStatus",x.error.message,"error");$("reviewTable").innerHTML="";for(let r of x.data||[]){let [p,u]=await Promise.all([sb.from("provinces").select("name").eq("id",r.province_id).maybeSingle(),sb.from("units").select("name").eq("id",r.unit_id).maybeSingle()]);let tr=document.createElement("tr");[((p.data?.name)||"")+" / "+((u.data?.name)||""),r.report_type,periodText(r),r.title,r.report_file?"Хавсаргасан":"—",r.review_status].forEach(v=>{let td=document.createElement("td");td.textContent=v||"";tr.appendChild(td)});let td=document.createElement("td");if(r.report_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.report_file);td.appendChild(b)};[["Батлах","Баталгаажсан","green"],["Буцаах","Буцаасан","danger"],["Хяналтад авах","Хянаж байна","secondary"]].forEach(([l,s,c])=>{let b=document.createElement("button");b.textContent=l;b.className=c;b.onclick=()=>reviewReport(r.id,s);td.appendChild(b)});tr.appendChild(td);$("reviewTable").appendChild(tr)}message("reviewStatus",(x.data||[]).length+" тайлан хяналтад байна.","success")}
 async function reviewReport(id,status){let c=$("reviewComment").value.trim();if(status==="Буцаасан"&&!c)return alert("Буцаах шалтгаан бичнэ үү");if(!confirm(status+" төлөвт шилжүүлэх үү?"))return;let x=await sb.from("reports").update({review_status:status,review_comment:status==="Баталгаажсан"?"":c,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()}).eq("id",id);if(x.error)return message("reviewStatus",x.error.message,"error");$("reviewComment").value="";await loadReviewQueue();await loadReports()}
-async function createInstitutions(){if(profile.role!=="admin")return alert("Админ эрх шаардлагатай");if(!confirm("30 байгууллага үүсгэх үү?"))return;$("createBtn").disabled=true;try{let x=await sb.functions.invoke("super-handler",{body:{}});if(x.error)throw x.error;if(x.data.error)throw Error(JSON.stringify(x.data));adminData=x.data;$("adminResult").textContent=JSON.stringify(x.data,null,2);message("adminStatus",x.data.message||"Дууслаа","success");$("downloadBtn").classList.remove("hidden")}catch(e){message("adminStatus",safeError(e),"error")}finally{$("createBtn").disabled=false}}
-function downloadCSV(){if(!adminData?.results)return;let rows=[["Код","Байгууллага","Email","Нууц үг","Төлөв","Алдаа"],...adminData.results.map(x=>[x.code,x.name,x.email,x.password,x.status,x.error])];let csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(",")).join("\r\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="30_baiguullaga.csv";a.click()}
+async function createInstitutions() {
+    if (profile.role !== "admin") {
+        alert("Админ эрх шаардлагатай");
+        return;
+    }
+
+    if (!confirm("30 байгууллага үүсгэх үү?")) {
+        return;
+    }
+
+    $("createBtn").disabled = true;
+    message("adminStatus", "Үүсгэж байна...");
+
+    try {
+        const result = await sb.functions.invoke("super-handler", {
+            body: {}
+        });
+
+        if (result.error) {
+            throw result.error;
+        }
+
+        adminData = result.data;
+        $("adminResult").textContent = JSON.stringify(result.data, null, 2);
+
+        message(
+            "adminStatus",
+            result.data.message || "Амжилттай дууслаа",
+            "success"
+        );
+
+        $("downloadBtn").classList.remove("hidden");
+
+    } catch (error) {
+        console.error("FUNCTION ERROR:", error);
+        message("adminStatus", "Алдаа: " + error.message, "error");
+
+    } finally {
+        $("createBtn").disabled = false;
+    }
+}function downloadCSV(){if(!adminData?.results)return;let rows=[["Код","Байгууллага","Email","Нууц үг","Төлөв","Алдаа"],...adminData.results.map(x=>[x.code,x.name,x.email,x.password,x.status,x.error])];let csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(",")).join("\r\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="30_baiguullaga.csv";a.click()}
 const trainingTypes=["Гамшгаас хамгаалах иж бүрэн сургууль","Гамшгаас хамгаалах Команд штабын сургууль","Удирдах албан тушаалтны","Сургуулийн ахлах ангийн сурагчдын","Сургуулийн дунд ангийн сурагчдын","Сургуулийн бага ангийн сурагчдын","Сургуулийн өмнөх боловсролын байгууллага","Гамшгаас хамгаалах алба, мэргэжлийн анги","Их, дээд сургууль, МСҮТ, коллежийн","Төрийн захиргаа болон хуулийн этгээдийн","Цэргийн дүйцүүлэх албаны","Сайн дурын иргэн, бүлгийн","Иргэдийн","Хөгжлийн бэрхшээлтэй иргэдийн"];
 function fillTrainingTypes(){if($("trType").options.length===0)trainingTypes.forEach(t=>$("trType").add(new Option(t,t)))}
 async function loadTrainingLocations(){let x=await sb.from("provinces").select("id,name").order("id");if(x.error)throw x.error;$("trProvince").innerHTML='<option value="">Аймаг сонгоно уу</option>';(x.data||[]).forEach(p=>$("trProvince").add(new Option(p.name,p.id)));if(profile.province_id)$("trProvince").value=profile.province_id;await loadTrainingUnits()}
