@@ -41,6 +41,18 @@ button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8
  <h3>Аймгийн гүйцэтгэл</h3>
  <div id="dashProvinceBars" style="display:grid;gap:9px"></div>
  <div class="table-wrap"><table><thead><tr><th>Аймаг</th><th>Бодит сургалт</th><th>Хүн</th><th>Баталгаажсан</th><th>Биелэлт</th></tr></thead><tbody id="dashProvinceTable"></tbody></table></div>
+ <hr style="margin:24px 0;border:0;border-top:1px solid #e2e8f0">
+ <h2>21 аймаг + Улаанбаатарын харьцуулалт</h2>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+  <div class="card"><small>Тайлан ирүүлсэн нэгж</small><h2 id="cmpSubmitted">—</h2></div>
+  <div class="card"><small>Тайлан ирүүлэлтийн хувь</small><h2 id="cmpRate">—</h2></div>
+  <div class="card"><small>Нийт тайлан</small><h2 id="cmpReports">—</h2></div>
+  <div class="card"><small>Нийт сургалт</small><h2 id="cmpTrainings">—</h2></div>
+ </div>
+ <h3>Тайлан ирүүлэлтийн график — эрэмбэ</h3>
+ <div id="cmpBars" style="display:grid;gap:8px"></div>
+ <h3>Аймаг, нийслэлийн эрэмбэлсэн хүснэгт</h3>
+ <div class="table-wrap"><table><thead><tr><th>№</th><th>Аймаг / Нийслэл</th><th>Тайлан</th><th>Сургалт</th><th>Ирүүлсэн эсэх</th></tr></thead><tbody id="cmpTable"></tbody></table></div>
 </section>
 <section id="planBox" class="card hidden">
   <h2>Сургалтын төлөвлөгөө — Удирдлага</h2>
@@ -157,7 +169,8 @@ async function loadDashboard(){
   const [rec,prov,plans]=await Promise.all([
    sb.from("training_records").select("province_id,participant_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
    sb.from("provinces").select("id,name").order("id"),
-   sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y)
+   sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y),
+   sb.from("reports").select("province_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y)
   ]);
   if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(plans.error)throw plans.error;
   const all=rec.data||[],approved=all.filter(r=>r.review_status==="Баталгаажсан"),pending=all.filter(r=>["Илгээсэн","Хүлээгдэж буй","Хяналтад"].includes(r.review_status));
@@ -166,6 +179,19 @@ async function loadDashboard(){
   const rows=(prov.data||[]).map(p=>({name:p.name,actual:ap[p.id]||0,people:people[p.id]||0,planned:pl[p.id]||0,pct:pl[p.id]?((ap[p.id]||0)/pl[p.id]*100):null}));
   $("dashProvinceTable").innerHTML=rows.map(r=>`<tr><td>${r.name}</td><td>${r.actual}</td><td>${r.people}</td><td>${r.actual}</td><td>${r.pct===null?"—":r.pct.toFixed(1)+"%"}</td></tr>`).join("");
   const max=Math.max(1,...rows.map(r=>r.actual));$("dashProvinceBars").innerHTML=rows.filter(r=>r.actual||r.planned).map(r=>`<div style="display:grid;grid-template-columns:120px 1fr 50px;gap:8px;align-items:center"><span>${r.name}</span><div style="height:16px;background:#e5eaf0;border-radius:5px"><div style="height:16px;width:${r.actual/max*100}%;background:#16834a;border-radius:5px"></div></div><b>${r.actual}</b></div>`).join("");
+  if(arguments.length===0){} // keep this function compatible with existing refresh controls
+  const rpt=arguments; // unused; report result is read from the query below
+  const reportsResult=await sb.from("reports").select("province_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y);
+  if(reportsResult.error)throw reportsResult.error;
+  const period=$("dashPeriod").value;
+  const filteredReports=(reportsResult.data||[]).filter(r=>{if(period==="all")return true;if(period.startsWith("q"))return Number(r.report_quarter)===Number(period.slice(1));if(period.startsWith("h"))return Number(r.report_half)===Number(period.slice(1));return true});
+  const submitted=filteredReports.filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
+  const reportCounts={},trainingCounts={};submitted.forEach(r=>reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1);all.forEach(r=>trainingCounts[r.province_id]=(trainingCounts[r.province_id]||0)+1);
+  const comparison=(prov.data||[]).map(p=>({id:p.id,name:p.name,reports:reportCounts[p.id]||0,trainings:trainingCounts[p.id]||0,hasReport:(reportCounts[p.id]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  const submittedUnits=comparison.filter(r=>r.hasReport).length,rate=comparison.length?submittedUnits/comparison.length*100:0;
+  $("cmpSubmitted").textContent=submittedUnits+" / "+comparison.length;$('cmpRate').textContent=rate.toFixed(1)+"%";$('cmpReports').textContent=submitted.length.toLocaleString();$('cmpTrainings').textContent=all.length.toLocaleString();
+  const maxReports=Math.max(1,...comparison.map(r=>r.reports));$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
+  $('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
   message("dashStatus",`${y} он ${$("dashPeriod").selectedOptions[0].text}: ${all.length} сургалт, ${all.reduce((s,r)=>s+Number(r.participant_total||0),0)} хүн.`, "success");
  }catch(e){message("dashStatus","Dashboard алдаа: "+safeError(e),"error")}
 }
@@ -574,7 +600,7 @@ async function loadStatistics(){
  }catch(e){message("statStatus","Статистикийн алдаа: "+safeError(e),"error")}
 }
 $("dashRefresh").onclick=loadDashboard;$("dashYear").onchange=loadDashboard;$("dashPeriod").onchange=loadDashboard;
-$("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()}; 
+("loginBtn").onclick=login;$("logoutBtn").onclick=logout;$("province").onchange=loadUnits;$("period").onchange=changePeriod;$("saveBtn").onclick=saveReport;$("cancelBtn").onclick=cancelEdit;$("refreshBtn").onclick=loadReports;$("createBtn").onclick=createInstitutions;$("downloadBtn").onclick=downloadCSV;$("trProvince").onchange=loadTrainingUnits;$("trSaveBtn").onclick=saveTraining;$("statRefresh").onclick=loadStatistics;$("reviewRefresh").onclick=loadReviewQueue;$("trRefreshBtn").onclick=loadTrainingRecords;$("fileCloseBtn").onclick=closeFileModal;$("fileDownloadBtn").onclick=downloadActiveFile;$("password").onkeydown=e=>{if(e.key==="Enter")login()}; 
 $("planSaveBtn").onclick = savePlan;
 $("planCancelBtn").onclick = cancelPlanEdit;
 $("planRefreshBtn").onclick = loadPlans;
