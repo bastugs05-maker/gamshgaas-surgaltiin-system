@@ -210,7 +210,7 @@ async function loadDashboard(){
  message("dashStatus","Dashboard мэдээлэл тооцож байна...");
  try{
   const [rec,prov,plans]=await Promise.all([
-   sb.from("training_records").select("province_id,participant_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
+   sb.from("training_records").select("province_id,participants_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
    sb.from("provinces").select("id,name").order("id"),
    sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y),
    sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y)
