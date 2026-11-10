@@ -210,7 +210,7 @@ async function loadDashboard(){
  message("dashStatus","Dashboard мэдээлэл тооцож байна...");
  try{
   const [rec,prov,plans]=await Promise.all([
-   sb.from("training_records").select("province_id,participants_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
+   sb.from("training_records").select("province_id,participant_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
    sb.from("provinces").select("id,name").order("id"),
    sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y),
    sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y)
@@ -702,9 +702,26 @@ async function saveTraining(){let pid=$("trProvince").value,uid=$("trUnit").valu
 async function loadTrainingRecords(){if(!currentUser)return;message("trListStatus","Сургалтын бүртгэл ачаалж байна...");let q=sb.from("training_records").select("*").order("created_at",{ascending:false});if(!isReviewer())q=q.eq("created_by",currentUser.id);let x=await q;if(x.error)return message("trListStatus","Алдаа: "+x.error.message,"error");trainingRows=x.data||[];let pids=[...new Set(trainingRows.map(r=>r.province_id))],uids=[...new Set(trainingRows.map(r=>r.unit_id))],pm={},um={};if(pids.length){let a=await sb.from("provinces").select("id,name").in("id",pids);(a.data||[]).forEach(v=>pm[v.id]=v.name)}if(uids.length){let a=await sb.from("units").select("id,name").in("id",uids);(a.data||[]).forEach(v=>um[v.id]=v.name)}$("trListTable").innerHTML="";trainingRows.forEach((r,i)=>{let tr=document.createElement("tr");[i+1,r.training_date,(pm[r.province_id]||"")+" / "+(um[r.unit_id]||""),r.training_type,r.organization_name,r.participant_total,r.review_status||"—"].forEach(v=>{let td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});let td=document.createElement("td");if(r.certificate_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.certificate_file);td.appendChild(b)}else td.textContent="Хавсаргаагүй";tr.appendChild(td);
 let act=document.createElement("td");
 if(isReviewer()){
+ if(r.review_status!=="Баталгаажсан"){
+  let ok=document.createElement("button");ok.textContent="Баталгаажуулах";ok.className="green";ok.onclick=()=>reviewTrainingRecord(r.id,"Баталгаажсан");act.appendChild(ok);
+  let back=document.createElement("button");back.textContent="Буцаах";back.className="secondary";back.onclick=()=>reviewTrainingRecord(r.id,"Буцаасан");act.appendChild(back);
+ }
  let del=document.createElement("button");del.textContent="Устгах";del.className="danger";del.title="Энэ бүртгэлийг бүрмөсөн устгах";del.onclick=()=>deleteTrainingRecord(r.id,r.certificate_file);act.appendChild(del)
 }else{act.textContent="—"}
 tr.appendChild(act);$("trListTable").appendChild(tr)});message("trListStatus","Нийт "+trainingRows.length+" бүртгэл.","success")}
+async function reviewTrainingRecord(id,status){
+ if(!isReviewer())return message("trListStatus","Баталгаажуулах эрх шаардлагатай.","error");
+ if(status==="Буцаасан"){const reason=prompt("Буцаах шалтгаан бичнэ үү");if(!reason)return}
+ if(!confirm("Сургалтын бүртгэлийг "+status+" төлөвт шилжүүлэх үү?"))return;
+ try{
+  const payload={review_status:status,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()};
+  const upd=await sb.from("training_records").update(payload).eq("id",id);if(upd.error)throw upd.error;
+  const chk=await sb.from("training_records").select("id,review_status").eq("id",id).maybeSingle();if(chk.error)throw chk.error;
+  if(!chk.data||chk.data.review_status!==status)throw Error("Төлөв DB-д хадгалагдсангүй. UPDATE/SELECT RLS policy шалгана уу.");
+  message("trListStatus","Сургалтын бүртгэл "+status+" төлөвтэй боллоо.","success");
+  await loadTrainingRecords();await loadStatistics();if(profile.role==="admin")await loadDashboard();
+ }catch(e){message("trListStatus","Баталгаажуулах алдаа: "+safeError(e),"error")}
+}
 async function deleteTrainingRecord(id,filePath){
  if(!isReviewer())return message("trListStatus","Устгах эрх зөвхөн админ/хянагчид байна.","error");
  if(!confirm("Энэ сургалтын бүртгэл болон хавсаргасан файлыг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй."))return;
