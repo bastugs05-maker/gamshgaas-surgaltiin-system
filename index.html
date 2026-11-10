@@ -224,12 +224,19 @@ async function loadDashboard(){
   const period=$("dashPeriod").value;
   const filteredReports=(reportsResult.data||[]).filter(r=>{if(period==="all")return true;if(period.startsWith("q"))return Number(r.report_quarter)===Number(period.slice(1));if(period.startsWith("h"))return Number(r.report_half)===Number(period.slice(1));return true});
   // Approved report performance table: only admin-confirmed reports count.
-  const approvedReports=(reportsResult.data||[]).filter(r=>r.review_status==="Баталгаажсан");
-  const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
+  const approvedReports=(reportsResult.data||[]).filter(r=>String(r.review_status||"").trim().toLowerCase().includes("баталгааж"));
+  const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;
+   else if(Number(r.report_half)===2)z.h2++;
+   else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;
+   z.total++;});
   const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
-  const submitted=filteredReports.filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
+  const submitted=filteredReports; // тайлангийн мөр үүссэн бол байгууллага тайлан оруулсан гэж тооцно
   const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
-  submitted.forEach(r=>{reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1;if(r.unit_id!==null&&r.unit_id!==undefined)submittedUnitIds.add(String(r.unit_id));});
+  submitted.forEach(r=>{
+   reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1;
+   const key=(r.unit_id!==null&&r.unit_id!==undefined&&String(r.unit_id)!=="")?"unit:"+r.unit_id:"province:"+r.province_id;
+   submittedUnitIds.add(key);
+  });
   all.forEach(r=>trainingCounts[r.province_id]=(trainingCounts[r.province_id]||0)+1);
   const comparison=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>({id:p.id,name:p.name,reports:reportCounts[p.id]||0,trainings:trainingCounts[p.id]||0,hasReport:(reportCounts[p.id]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
   const submittedUnits=submittedUnitIds.size, totalUnits=32, rate=totalUnits?submittedUnits/totalUnits*100:0;
