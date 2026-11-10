@@ -154,7 +154,12 @@ const SUPABASE_URL="https://djzlkhvkpmhgxoykeozt.supabase.co";
 const SUPABASE_KEY="sb_publishable_iBVTq-ruWQDXLWTEO4wqAA_PT1AKG3d";
 const $=id=>document.getElementById(id);let sb=null,currentUser=null,profile={},reports=[],adminData=null,trainingRows=[],activeFileUrl="",activeFileName="";
 const isReviewer=()=>["admin","reviewer"].includes(profile.role);
-function message(id,t,c=""){$(id).textContent=t;$(id).className="message "+c}
+function message(id,t,c=""){
+  const el=$(id);
+  if(!el)return;
+  el.textContent=t;
+  el.className="message "+c;
+}
 function safeError(e){return e?.message||String(e)}
 async function login(){const email=$("email").value.trim(),password=$("password").value;if(!email||!password)return message("loginStatus","И-мэйл, нууц үгээ оруулна уу.","error");$("loginBtn").disabled=true;message("loginStatus","Нэвтэрч байна...");try{if(!sb)throw Error("Supabase сан ачаалагдсангүй.");let x=await sb.auth.signInWithPassword({email,password});if(x.error)throw x.error;currentUser=x.data.user;await showApp()}catch(e){$("loginSection").classList.remove("hidden");$("appSection").classList.add("hidden");message("loginStatus","Алдаа: "+safeError(e),"error")}finally{$("loginBtn").disabled=false}}
 async function logout(){if(sb)await sb.auth.signOut();currentUser=null;profile={};$("appSection").classList.add("hidden");$("loginSection").classList.remove("hidden");$("password").value="";message("loginStatus","Системээс гарлаа.","success")}
