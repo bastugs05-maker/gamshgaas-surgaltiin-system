@@ -137,7 +137,6 @@ button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8
 <div><label>Байгууллагын төрөл</label><select id="trOrgType"><option>Төрийн байгууллага</option><option>Хувийн байгууллага</option><option>Төрийн бус байгууллага</option><option>Бусад</option></select></div><div><label>Байгууллагын нэр</label><input id="trOrgName"></div>
 <div><label>Нийт</label><input id="trTotal" type="number" min="0" value="0"></div><div><label>Эрэгтэй</label><input id="trMale" type="number" min="0" value="0"></div><div><label>Эмэгтэй</label><input id="trFemale" type="number" min="0" value="0"></div><div><label>Хэлбэр</label><select id="trFormat"><option>Танхим</option><option>Цахим</option><option>Дадлага</option></select></div><div><label>Сэдэв</label><select id="trTopic"><option>Гал түймрийн аюулаас урьдчилан сэргийлэх</option><option>Газар хөдлөлт</option><option>Үер</option><option>Анхны тусламж</option><option>Гамшгийн үеийн бэлэн байдал</option><option>Бусад</option></select></div></div>
 <label>Сэдэв (Бусад)</label><input id="trTopicOther"><label>Баталгааны файл (PDF/Word/JPG/PNG, 10MB хүртэл)</label><input id="trFile" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"><button id="trSaveBtn" class="green">Бүртгэл хадгалах</button><div id="trStatus" class="message"></div></section>
-<section id="trainingReviewBox" class="card hidden"><div class="toolbar"><h2>Ерөнхий газар — Сургалтын бүртгэл хянах</h2><button id="trainingReviewRefresh" class="secondary">Шинэчлэх</button></div><div id="trainingReviewStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>Огноо</th><th>Аймаг/сум</th><th>Төрөл</th><th>Байгууллага</th><th>Хүн</th><th>Файл</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead><tbody id="trainingReviewTable"></tbody></table></div></section>
 <section class="card"><div class="toolbar"><h2>Сургалтын бүртгэлүүд — баталгааны файл</h2><button id="trRefreshBtn" class="secondary">Шинэчлэх</button></div><div id="trListStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Огноо</th><th>Аймаг/сум</th><th>Төрөл</th><th>Байгууллага</th><th>Хүн</th><th>Төлөв</th><th>Файл</th></tr></thead><tbody id="trListTable"></tbody></table></div></section>
 <section class="card"><h2>Сургалтын статистик (баталгаажсан)</h2><div class="grid"><div><label>Он</label><select id="statYear"></select></div><div><label>Аймаг</label><select id="statProvince"><option value="">Бүх аймаг</option></select></div></div><button id="statRefresh">Статистик шинэчлэх</button><div id="statStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Төрөл</th><th>Сургалт</th><th>Хүн</th><th>Эрэгтэй</th><th>Эмэгтэй</th></tr></thead><tbody id="statTable"></tbody></table></div><div id="statTotals"></div></section>
 <section class="card"><div class="toolbar"><h2>Тайлангууд</h2><button id="refreshBtn">Шинэчлэх</button></div><div id="reportStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Аймаг/сум</th><th>Төрөл</th><th>Хугацаа</th><th>Гарчиг</th><th>Тайлбар</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead><tbody id="reportTable"></tbody></table></div></section>
@@ -166,7 +165,7 @@ if(profile.role==="admin"){ $("dashYear").innerHTML="";for(let yy=new Date().get
 if (profile.role === "admin") {
   await initPlanForm();
 }
-$("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("trainingReviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(profile.role==="admin")await loadDashboard();if(isReviewer()){await loadReviewQueue();await loadTrainingReviewQueue()}}
+$("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(profile.role==="admin")await loadDashboard();if(isReviewer())await loadReviewQueue()}
 
 function dashRange(y,p){if(p==="q1")return [y+"-01-01",y+"-03-31"];if(p==="q2")return [y+"-04-01",y+"-06-30"];if(p==="q3")return [y+"-07-01",y+"-09-30"];if(p==="q4")return [y+"-10-01",y+"-12-31"];if(p==="h1")return [y+"-01-01",y+"-06-30"];if(p==="h2")return [y+"-07-01",y+"-12-31"];return [y+"-01-01",y+"-12-31"]}
 let dashboardExportData=null;
@@ -499,7 +498,13 @@ async function loadProvinces() {
     await loadUnits();
   }
 }
-async function loadUnits(){let pid=$("province").value,s=$("unit");s.innerHTML='<option value="">Сум/дүүрэг сонгоно уу</option>';if(!pid)return;let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");if(["district","unit"].includes(profile.role))q=q.eq("id",profile.unit_id);let x=await q;if(x.error)throw x.error;(x.data||[]).forEach(u=>s.add(new Option(u.name,u.id)));if(profile.unit_id)s.value=profile.unit_id}
+async function loadUnits(){let pid=$("province").value,s=$("unit");s.innerHTML='<option value="">Сум / Дүүрэг / Байгууллага сонгоно уу</option>';if(!pid)return;let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");if(["district","unit"].includes(profile.role))q=q.eq("id",profile.unit_id);let x=await q;if(x.error)throw x.error;
+const units=x.data||[];
+units.sort((a,b)=>{
+  const priority=n=>n==="Нийслэлийн Онцгой байдлын газар"?0:n==="Гамшгаас хамгаалах 116-р анги"?1:2;
+  return priority(a.name)-priority(b.name)||a.name.localeCompare(b.name,"mn");
+});
+units.forEach(u=>s.add(new Option(u.name,u.id)));if(profile.unit_id)s.value=profile.unit_id}
 function changePeriod(){let p=$("period").value;["month","quarter","half"].forEach(k=>$(k+"Box").classList.toggle("hidden",p!==k))}
 function periodText(r){if(r.report_month)return r.report_year+" / "+r.report_month+"-р сар";if(r.report_quarter)return r.report_year+" / "+r.report_quarter+"-р улирал";if(r.report_half)return r.report_year+" / "+r.report_half+"-р хагас";return r.report_year+" он"}
 async function saveReport(){
@@ -612,34 +617,14 @@ async function loadTrainingLocations() {
 
   await loadTrainingUnits();
 }
-async function loadTrainingUnits(){let pid=$("trProvince").value;$("trUnit").innerHTML='<option value="">Сум сонгоно уу</option>';if(!pid)return;let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");if(profile.unit_id)q=q.eq("id",profile.unit_id);let x=await q;if(x.error)throw x.error;(x.data||[]).forEach(u=>$("trUnit").add(new Option(u.name,u.id)));if(profile.unit_id)$("trUnit").value=profile.unit_id}
+async function loadTrainingUnits(){let pid=$("trProvince").value;$("trUnit").innerHTML='<option value="">Сум / Дүүрэг / Байгууллага сонгоно уу</option>';if(!pid)return;let q=sb.from("units").select("id,name").eq("province_id",pid).order("name");if(profile.unit_id)q=q.eq("id",profile.unit_id);let x=await q;if(x.error)throw x.error;
+const units=x.data||[];
+units.sort((a,b)=>{
+  const priority=n=>n==="Нийслэлийн Онцгой байдлын газар"?0:n==="Гамшгаас хамгаалах 116-р анги"?1:2;
+  return priority(a.name)-priority(b.name)||a.name.localeCompare(b.name,"mn");
+});
+units.forEach(u=>$("trUnit").add(new Option(u.name,u.id)));if(profile.unit_id)$("trUnit").value=profile.unit_id}
 async function saveTraining(){let pid=$("trProvince").value,uid=$("trUnit").value,date=$("trDate").value,total=+$("trTotal").value,m=+$("trMale").value,f=+$("trFemale").value,topic=$("trTopic").value==="Бусад"?$("trTopicOther").value.trim():$("trTopic").value;if(!pid||!uid||!date||!$("trType").value||!$("trOrgName").value.trim()||!topic)return message("trStatus","Шаардлагатай талбаруудыг бөглөнө.","error");if(m+f>total)return message("trStatus","Эрэгтэй + эмэгтэй нийтээс их байна.","error");try{let path=null,file=$("trFile").files[0];if(file){if(file.size>10*1024*1024)throw Error("Файл 10MB-аас их");path=currentUser.id+"/training/"+Date.now()+"_"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");let up=await sb.storage.from("training-files").upload(path,file);if(up.error)throw up.error}let x=await sb.from("training_records").insert({created_by:currentUser.id,province_id:+pid,unit_id:+uid,training_date:date,training_type:$("trType").value,organization_type:$("trOrgType").value,organization_name:$("trOrgName").value.trim(),participant_total:total,male_count:m,female_count:f,training_format:$("trFormat").value,training_topic:topic,certificate_file:path,review_status:"Илгээсэн",submitted_at:new Date().toISOString()});if(x.error)throw x.error;message("trStatus","Бүртгэл илгээгдлээ.","success");$("trOrgName").value="";$("trFile").value="";await loadTrainingRecords();await loadStatistics()}catch(e){message("trStatus","Алдаа: "+safeError(e),"error")}}
-async function loadTrainingReviewQueue(){
- if(!currentUser||!isReviewer())return;
- message("trainingReviewStatus","Сургалтын бүртгэл ачаалж байна...");
- let x=await sb.from("training_records").select("*").in("review_status",["Илгээсэн","Хянаж байна","Засварласан"]).order("submitted_at",{ascending:true});
- if(x.error)return message("trainingReviewStatus","Алдаа: "+x.error.message,"error");
- $("trainingReviewTable").innerHTML="";
- for(const r of (x.data||[])){
-  const [p,u]=await Promise.all([sb.from("provinces").select("name").eq("id",r.province_id).maybeSingle(),sb.from("units").select("name").eq("id",r.unit_id).maybeSingle()]);
-  const tr=document.createElement("tr");
-  [(r.training_date||""),(p.data?.name||"")+" / "+(u.data?.name||""),r.training_type||"",r.organization_name||"",r.participant_total??0,r.certificate_file?"Хавсаргасан":"—",r.review_status||""].forEach(v=>{let td=document.createElement("td");td.textContent=v;tr.appendChild(td)});
-  const td=document.createElement("td");
-  if(r.certificate_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.certificate_file);td.appendChild(b)}
-  [["Батлах","Баталгаажсан","green"],["Буцаах","Буцаасан","danger"],["Хяналтад авах","Хянаж байна","secondary"]].forEach(([label,status,cls])=>{let b=document.createElement("button");b.textContent=label;b.className=cls;b.onclick=()=>reviewTraining(r.id,status);td.appendChild(b)});
-  tr.appendChild(td);$("trainingReviewTable").appendChild(tr);
- }
- message("trainingReviewStatus",(x.data||[]).length+" сургалтын бүртгэл хяналтад байна.","success");
-}
-async function reviewTraining(id,status){
- const comment=prompt(status==="Буцаасан"?"Буцаах шалтгааныг бичнэ үү:":"Тайлбар (заавал биш):", "");
- if(status==="Буцаасан"&&!comment?.trim())return alert("Буцаах шалтгаан шаардлагатай.");
- if(!confirm(status+" төлөвт шилжүүлэх үү?"))return;
- const patch={review_status:status,review_comment:status==="Баталгаажсан"?"":(comment||""),reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()};
- const x=await sb.from("training_records").update(patch).eq("id",id);
- if(x.error)return message("trainingReviewStatus","Алдаа: "+x.error.message,"error");
- await loadTrainingReviewQueue();await loadTrainingRecords();await loadStatistics();await loadDashboard();
-}
 async function loadTrainingRecords(){if(!currentUser)return;message("trListStatus","Сургалтын бүртгэл ачаалж байна...");let q=sb.from("training_records").select("*").order("created_at",{ascending:false});if(!isReviewer())q=q.eq("created_by",currentUser.id);let x=await q;if(x.error)return message("trListStatus","Алдаа: "+x.error.message,"error");trainingRows=x.data||[];let pids=[...new Set(trainingRows.map(r=>r.province_id))],uids=[...new Set(trainingRows.map(r=>r.unit_id))],pm={},um={};if(pids.length){let a=await sb.from("provinces").select("id,name").in("id",pids);(a.data||[]).forEach(v=>pm[v.id]=v.name)}if(uids.length){let a=await sb.from("units").select("id,name").in("id",uids);(a.data||[]).forEach(v=>um[v.id]=v.name)}$("trListTable").innerHTML="";trainingRows.forEach((r,i)=>{let tr=document.createElement("tr");[i+1,r.training_date,(pm[r.province_id]||"")+" / "+(um[r.unit_id]||""),r.training_type,r.organization_name,r.participant_total,r.review_status||"—"].forEach(v=>{let td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});let td=document.createElement("td");if(r.certificate_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.certificate_file);td.appendChild(b)}else td.textContent="Хавсаргаагүй";tr.appendChild(td);$("trListTable").appendChild(tr)});message("trListStatus","Нийт "+trainingRows.length+" бүртгэл.","success")}
 async function openFile(path){try{if(!path)throw Error("Файлын зам хоосон байна.");let x=await sb.storage.from("training-files").createSignedUrl(path,600);if(x.error)throw x.error;activeFileUrl=x.data.signedUrl;activeFileName=path.split("/").pop()||"file";let ext=activeFileName.split(".").pop().toLowerCase();$("fileModalTitle").textContent=activeFileName;$("filePreview").innerHTML="";$("fileModalStatus").textContent="";
 if(["pdf"].includes(ext)){$("filePreview").innerHTML='<iframe class="preview" title="PDF preview"></iframe>';$("filePreview").firstChild.src=activeFileUrl}
@@ -691,7 +676,7 @@ $("trRefreshBtn").onclick=loadTrainingRecords;
 $("statRefresh").onclick=loadStatistics;
 $("statYear").onchange=loadStatistics;
 $("statProvince").onchange=loadStatistics;
-$("reviewRefresh").onclick=loadReviewQueue;$("trainingReviewRefresh").onclick=loadTrainingReviewQueue;
+$("reviewRefresh").onclick=loadReviewQueue;
 $("fileDownloadBtn").onclick=downloadActiveFile;
 $("fileCloseBtn").onclick=closeFileModal;
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
