@@ -555,11 +555,49 @@ async function deleteReport(id){
 }
 async function downloadFile(path){let x=await sb.storage.from("training-files").createSignedUrl(path,300);if(x.error)alert(x.error.message);else window.open(x.data.signedUrl,"_blank")}
 async function loadReviewQueue(){
- try{if(!isReviewer())throw Error("Тайлан хянах эрх шаардлагатай.");message("reviewStatus","Аймгийн тайланг ачаалж байна...");let x=await sb.from("reports").select("*").in("review_status",["Илгээсэн","Хянаж байна","Засварласан"]).order("submitted_at",{ascending:true});if(x.error)throw x.error;$("reviewTable").innerHTML="";for(let r of x.data||[]){let [p,u]=await Promise.all([sb.from("provinces").select("name").eq("id",r.province_id).maybeSingle(),sb.from("units").select("name").eq("id",r.unit_id).maybeSingle()]);let tr=document.createElement("tr");[((p.data?.name)||"")+" / "+((u.data?.name)||""),r.report_type,periodText(r),r.title,r.report_file?"Хавсаргасан":"—",r.review_status].forEach(v=>{let td=document.createElement("td");td.textContent=v||"";tr.appendChild(td)});let td=document.createElement("td");if(r.report_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.report_file);td.appendChild(b)};[["Баталгаажуулах","Баталгаажсан","green"],["Буцаах","Буцаасан","danger"],["Хяналтад авах","Хянаж байна","secondary"]].forEach(([l,s,c])=>{let b=document.createElement("button");b.textContent=l;b.className=c;b.onclick=()=>reviewReport(r.id,s);td.appendChild(b)});if(profile.role==="admin"){let del=document.createElement("button");del.textContent="Устгах";del.className="danger";del.onclick=()=>deleteReport(r.id);td.appendChild(del)}tr.appendChild(td);$("reviewTable").appendChild(tr)}message("reviewStatus",(x.data||[]).length+" тайлан хяналтад байна.","success")
- }catch(e){message("reviewStatus","Тайлан хяналтын алдаа: "+safeError(e),"error")}}
+ try{
+  if(!isReviewer())throw Error("Тайлан хянах эрх шаардлагатай.");
+  message("reviewStatus","Ирсэн тайланг ачаалж байна...");
+  // Илгээсэн болон буцааж засварлаад дахин илгээсэн тайланг бүгдийг харуулна.
+  const statuses=["Илгээсэн","Хянаж байна","Засварласан","Хүлээгдэж буй"];
+  const x=await sb.from("reports").select("*").in("review_status",statuses).order("submitted_at",{ascending:true});
+  if(x.error)throw x.error;
+  $("reviewTable").innerHTML="";
+  for(const r of (x.data||[])){
+   const [p,u]=await Promise.all([
+    sb.from("provinces").select("name").eq("id",r.province_id).maybeSingle(),
+    sb.from("units").select("name").eq("id",r.unit_id).maybeSingle()
+   ]);
+   const tr=document.createElement("tr");
+   [(p.data?.name||"")+" / "+(u.data?.name||""),r.report_type,periodText(r),r.title,r.report_file?"Хавсаргасан":"—",r.review_status]
+    .forEach(v=>{const td=document.createElement("td");td.textContent=v||"";tr.appendChild(td)});
+   const td=document.createElement("td");
+   if(r.report_file){const f=document.createElement("button");f.textContent="Файл нээх";f.onclick=()=>openFile(r.report_file);td.appendChild(f)}
+   [["Баталгаажуулах","Баталгаажсан","green"],["Буцаах","Буцаасан","danger"],["Хяналтад авах","Хянаж байна","secondary"]]
+    .forEach(([label,status,cls])=>{const b=document.createElement("button");b.textContent=label;b.className=cls;b.onclick=()=>reviewReport(r.id,status);td.appendChild(b)});
+   if(profile.role==="admin"){const d=document.createElement("button");d.textContent="Устгах";d.className="danger";d.onclick=()=>deleteReport(r.id);td.appendChild(d)}
+   tr.appendChild(td);$("reviewTable").appendChild(tr);
+  }
+  message("reviewStatus",(x.data||[]).length+" тайлан хяналтад байна.","success");
+ }catch(e){message("reviewStatus","Тайлан хяналтын алдаа: "+safeError(e),"error")}
+}
 async function reviewReport(id,status){
- try{if(!isReviewer())throw Error("Баталгаажуулах эрх шаардлагатай.");let c=$("reviewComment").value.trim();if(status==="Буцаасан"&&!c)return alert("Буцаах шалтгаан бичнэ үү");if(!confirm(status+" төлөвт шилжүүлэх үү?"))return;message("reviewStatus","Төлөв шинэчилж байна...");let x=await sb.from("reports").update({review_status:status,review_comment:status==="Баталгаажсан"?"":c,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()}).eq("id",id).select("id,review_status").maybeSingle();if(x.error)throw x.error;if(!x.data)throw Error("Мөр шинэчлэгдсэнгүй. Supabase RLS UPDATE эрх эсвэл тайлангийн ID-г шалгана уу.");$("reviewComment").value="";message("reviewStatus","Амжилттай: "+x.data.review_status,"success");await loadReviewQueue();await loadReports();if(profile.role==="admin")await loadDashboard();
- }catch(e){message("reviewStatus","Баталгаажуулах алдаа: "+safeError(e),"error")}}
+ try{
+  if(!isReviewer())throw Error("Баталгаажуулах эрх шаардлагатай.");
+  const c=$("reviewComment").value.trim();
+  if(status==="Буцаасан"&&!c){alert("Буцаах шалтгаан бичнэ үү");return}
+  if(!confirm("Тайланг '"+status+"' төлөвт шилжүүлэх үү?"))return;
+  message("reviewStatus","Төлөв шинэчилж байна...");
+  const payload={review_status:status,review_comment:status==="Баталгаажсан"?"":c,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()};
+  const x=await sb.from("reports").update(payload).eq("id",id).select("id,review_status").maybeSingle();
+  if(x.error)throw x.error;
+  if(!x.data)throw Error("Өөрчлөлт хийгдсэнгүй. Supabase-ийн reports UPDATE болон SELECT RLS policy-г шалгана уу.");
+  $("reviewComment").value="";
+  message("reviewStatus","Амжилттай баталгаажлаа: "+x.data.review_status,"success");
+  await Promise.all([loadReviewQueue(),loadReports()]);
+  if(profile.role==="admin")await loadDashboard();
+ }catch(e){message("reviewStatus","Баталгаажуулах алдаа: "+safeError(e),"error")}
+}
 async function createInstitutions() {
     if (profile.role !== "admin") {
         alert("Админ эрх шаардлагатай");
