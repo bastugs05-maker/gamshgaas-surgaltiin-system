@@ -652,3 +652,9 @@ $("planRefreshBtn").onclick = loadPlans;
 
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
 </script></body></html>
+$("createBtn").onclick=createInstitutions;
+$("createBtn").addEventListener("click", () => {
+  console.log("CREATE BUTTON CLICKED");
+  console.log("PROFILE:", profile);
+  console.log("ROLE:", profile.role);
+});
