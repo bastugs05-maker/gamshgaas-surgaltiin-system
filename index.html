@@ -650,11 +650,22 @@ $("planSaveBtn").onclick = savePlan;
 $("planCancelBtn").onclick = cancelPlanEdit;
 $("planRefreshBtn").onclick = loadPlans;
 
+$("logoutBtn").onclick=logout;
+$("createBtn").onclick=createInstitutions;
+$("downloadBtn").onclick=downloadCSV;
+$("refreshBtn").onclick=loadReports;
+$("saveBtn").onclick=saveReport;
+$("cancelBtn").onclick=cancelEdit;
+$("province").onchange=loadUnits;
+$("period").onchange=changePeriod;
+$("trProvince").onchange=loadTrainingUnits;
+$("trSaveBtn").onclick=saveTraining;
+$("trRefreshBtn").onclick=loadTrainingRecords;
+$("statRefresh").onclick=loadStatistics;
+$("statYear").onchange=loadStatistics;
+$("statProvince").onchange=loadStatistics;
+$("reviewRefresh").onclick=loadReviewQueue;
+$("fileDownloadBtn").onclick=downloadActiveFile;
+$("fileCloseBtn").onclick=closeFileModal;
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
 </script></body></html>
-$("createBtn").onclick=createInstitutions;
-$("createBtn").addEventListener("click", () => {
-  console.log("CREATE BUTTON CLICKED");
-  console.log("PROFILE:", profile);
-  console.log("ROLE:", profile.role);
-});
