@@ -240,8 +240,8 @@ async function loadDashboard(){
   // 32 нэгжийн суурь тоо UI-д тогтоосон; нэгжийн ID давхардалгүй тайлан ирүүлснийг тоолно.
   const submittedUnits=submittedUnitIds.size,totalUnits=32,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
-  $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
-  $("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
+  if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
+  if($("dashSubmissionRate")) $("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
   const missingUnits=Math.max(0,comparison.length-submittedUnits);
   const yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
   $("dashTotalReports").textContent=submitted.length.toLocaleString();
