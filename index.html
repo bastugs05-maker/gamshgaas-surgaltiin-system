@@ -228,21 +228,23 @@ async function loadDashboard(){
   const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
   const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
   const submitted=filteredReports.filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
-  const reportCounts={},trainingCounts={};submitted.forEach(r=>reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1);all.forEach(r=>trainingCounts[r.province_id]=(trainingCounts[r.province_id]||0)+1);
+  const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
+  submitted.forEach(r=>{reportCounts[r.province_id]=(reportCounts[r.province_id]||0)+1;if(r.unit_id!==null&&r.unit_id!==undefined)submittedUnitIds.add(String(r.unit_id));});
+  all.forEach(r=>trainingCounts[r.province_id]=(trainingCounts[r.province_id]||0)+1);
   const comparison=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>({id:p.id,name:p.name,reports:reportCounts[p.id]||0,trainings:trainingCounts[p.id]||0,hasReport:(reportCounts[p.id]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=comparison.filter(r=>r.hasReport).length,rate=comparison.length?submittedUnits/comparison.length*100:0;
+  const submittedUnits=submittedUnitIds.size, totalUnits=32, rate=totalUnits?submittedUnits/totalUnits*100:0;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
-  const missingUnits=Math.max(0,comparison.length-submittedUnits);
+  const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
   $("dashTotalReports").textContent=submitted.length.toLocaleString();
-  $("dashSubmittedUnits").textContent=`${submittedUnits} / ${comparison.length}`;
+  $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   $("dashMissingUnits").textContent=missingUnits.toLocaleString()+" байгууллага";
   $("dashYearPerformance").textContent=yearPerformance;
-  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits:comparison.length,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
-  $("cmpSubmitted").textContent=submittedUnits+" / "+comparison.length;$('cmpRate').textContent=rate.toFixed(1)+"%";$('cmpReports').textContent=submitted.length.toLocaleString();$('cmpTrainings').textContent=all.length.toLocaleString();
+  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
+  $("cmpSubmitted").textContent=submittedUnits+" / "+totalUnits;$('cmpRate').textContent=rate.toFixed(1)+"%";$('cmpReports').textContent=submitted.length.toLocaleString();$('cmpTrainings').textContent=all.length.toLocaleString();
   const maxReports=Math.max(1,...comparison.map(r=>r.reports));$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
   $('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
-  message("dashStatus",`${y} он ${$("dashPeriod").selectedOptions[0].text}: ${all.length} сургалт, ${all.reduce((s,r)=>s+Number(r.participant_total||0),0)} хүн.`, "success");
+  message("dashStatus",`${y} он ${$("dashPeriod").selectedOptions[0].text}: ${all.length} сургалт, ${all.reduce((s,r)=>s+Number(r.participant_total||0),0)} хүн; тайлан ирүүлсэн ${submittedUnits}/${totalUnits} байгууллага.`, "success");
  }catch(e){message("dashStatus","Dashboard алдаа: "+safeError(e),"error")}
 }
 
