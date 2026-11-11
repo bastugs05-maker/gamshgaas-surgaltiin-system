@@ -235,115 +235,82 @@ async function loadDashboard(){
   const approvedReports=(reportsResult.data||[]).filter(r=>r.review_status==="Баталгаажсан");
   const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
   const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
-  // Нийт 32 байгууллага: 21 аймаг + 9 дүүрэг + НОБГ + 116-р анги
-  const aimagNames = new Set(
-    (prov.data || [])
-      .filter(p => String(p.name || "").trim() !== "Улаанбаатар")
-      .map(p => String(p.name || "").trim())
-  );
-  const districtNames = [
-    "Багануур", "Багахангай", "Баянгол дүүрэг", "Баянзүрх дүүрэг",
-    "Налайх", "Сонгинохайрхан", "Сүхбаатар дүүрэг", "Хан-Уул",
-    "Чингэлтэй"
+  // ===== 32 байгууллагын жагсаалт (давхардалгүй) =====
+  const canonicalAimagNames = [
+    "Архангай","Баян-Өлгий","Баянхонгор","Булган","Говь-Алтай",
+    "Говьсүмбэр","Дархан-Уул","Дорноговь","Дорнод","Дундговь",
+    "Завхан","Орхон","Өвөрхангай","Өмнөговь","Сүхбаатар",
+    "Сэлэнгэ","Төв","Увс","Ховд","Хөвсгөл","Хэнтий"
   ];
-  const normUnitName = value => String(value || "")
-    .trim().replace(/\s+/g, " ").toLowerCase();
-
-  const unitsList = units.data || [];
-  const pickOne = (names, preferred) => {
-    const wanted = new Set(names.map(normUnitName));
-    const matches = unitsList.filter(u => wanted.has(normUnitName(u.name)));
-    // Давхардсан нэр/alias байвал canonical нэртэй нэг бичлэгийг сонгоно.
-    matches.sort((a,b) =>
-      (normUnitName(a.name) === normUnitName(preferred) ? -1 : 0) -
-      (normUnitName(b.name) === normUnitName(preferred) ? -1 : 0)
-    );
-    return matches[0] || null;
+  const canonicalDistrictNames = [
+    "Багануур","Багахангай","Баянгол дүүрэг","Баянзүрх дүүрэг",
+    "Налайх","Сонгинохайрхан","Сүхбаатар дүүрэг","Хан-Уул","Чингэлтэй"
+  ];
+  const normName = v => String(v || "").trim().replace(/\s+/g," ").toLocaleLowerCase("mn");
+  const unitList = units.data || [];
+  const getExactUnit = name => unitList.find(u => normName(u.name) === normName(name)) || null;
+  const getUnitByAliases = aliases => {
+    for (const alias of aliases) {
+      const found = getExactUnit(alias);
+      if (found) return found;
+    }
+    return null;
   };
 
-  // Үндсэн 21 аймгийн төв байгууллага — аймаг бүрээс ганц
   const baseUnits = [];
-  aimagNames.forEach(name => {
-    const u = pickOne([name], name);
+  // 21 аймаг
+  canonicalAimagNames.forEach(n => {
+    const u = getExactUnit(n);
     if (u) baseUnits.push(u);
   });
-
-  // Улаанбаатарын 9 дүүрэг — дүүрэг бүрээс ганц
-  districtNames.forEach(name => {
-    const u = pickOne([name], name);
+  // Улаанбаатарын 9 дүүрэг
+  canonicalDistrictNames.forEach(n => {
+    const u = getExactUnit(n);
     if (u) baseUnits.push(u);
   });
-
-  // Тусгай 2 байгууллага — өөр нэршлийн alias-уудыг нэг мөр болгоно
-  const centralOB = pickOne([
-    "Нийслэлийн Онцгой байдлын газар",
-    "Нийслэлийн Онцгой байдлын газар "
-  ], "Нийслэлийн Онцгой байдлын газар");
-  if (centralOB) baseUnits.push(centralOB);
-
-  const unit116 = pickOne([
+  // Нийслэлийн ОБГ: alias-аас зөвхөн нэг бичлэг сонгоно
+  const ubObg = getUnitByAliases(["Нийслэлийн Онцгой байдлын газар"]);
+  if (ubObg) baseUnits.push(ubObg);
+  // 116-р анги: alias-аас зөвхөн нэг бичлэг сонгоно
+  const unit116 = getUnitByAliases([
     "Гамшгаас хамгаалах сургалтын 116 дугаар анги",
     "Гамшгаас хамгаалах 116-р анги",
     "Гамшгаас хамгаалах 116 дугаар анги"
-  ], "Гамшгаас хамгаалах сургалтын 116 дугаар анги");
+  ]);
   if (unit116) baseUnits.push(unit116);
 
-  // Давхардсан unit ID болон ижил байгууллагын нэрийг эцэслэн арилгана
-  const uniqueUnits = [];
-  const seenUnitIds = new Set();
-  const seenUnitNames = new Set();
-  baseUnits.forEach(u => {
-    const id = String(u.id);
-    const name = normUnitName(u.name);
-    if (!seenUnitIds.has(id) && !seenUnitNames.has(name)) {
-      seenUnitIds.add(id);
-      seenUnitNames.add(name);
-      uniqueUnits.push(u);
+  // Нэр болон ID давхардлыг хамгаалж эцсийн жагсаалтыг цэвэрлэнэ
+  const seenIds = new Set(), seenNames = new Set();
+  const comparisonUnits = baseUnits.filter(u => {
+    const id = String(u.id), name = normName(u.name);
+    if (seenIds.has(id) || seenNames.has(name)) return false;
+    seenIds.add(id); seenNames.add(name);
+    return true;
+  });
+
+  const unitReportCounts={},unitTrainingCounts={},submittedUnitIds=new Set();
+  submitted.forEach(r=>{
+    if(r.unit_id!=null){
+      const k=String(r.unit_id);
+      unitReportCounts[k]=(unitReportCounts[k]||0)+1;
+      submittedUnitIds.add(k);
     }
   });
-  baseUnits.splice(0, baseUnits.length, ...uniqueUnits);
-
-  // Тайлан болон сургалтыг байгууллагын unit_id-аар тоолно.
-  const unitReportCounts = {};
-  const unitTrainingCounts = {};
-  const submittedUnitIds = new Set();
-
-  submitted.forEach(r => {
-    if (r.unit_id != null) {
-      const key = String(r.unit_id);
-      unitReportCounts[key] = (unitReportCounts[key] || 0) + 1;
-      submittedUnitIds.add(key);
+  all.forEach(r=>{
+    if(r.unit_id!=null){
+      const k=String(r.unit_id);
+      unitTrainingCounts[k]=(unitTrainingCounts[k]||0)+1;
     }
   });
 
-  all.forEach(r => {
-    if (r.unit_id != null) {
-      const key = String(r.unit_id);
-      unitTrainingCounts[key] = (unitTrainingCounts[key] || 0) + 1;
-    }
-  });
+  const comparison=comparisonUnits.map(u=>{
+    const k=String(u.id), reports=unitReportCounts[k]||0, trainings=unitTrainingCounts[k]||0;
+    return {id:u.id,name:u.name,reports,trainings,hasReport:reports>0};
+  }).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
 
-  const comparison = baseUnits.map(u => {
-    const key = String(u.id);
-    const reports = unitReportCounts[key] || 0;
-    const trainings = unitTrainingCounts[key] || 0;
-    return {
-      id: u.id,
-      name: u.name,
-      reports,
-      trainings,
-      hasReport: reports > 0
-    };
-  }).sort((a, b) =>
-    b.reports - a.reports ||
-    b.trainings - a.trainings ||
-    a.name.localeCompare(b.name, "mn")
-  );
-
-  // Тайлан ирүүлсэн байгууллагын тоо / нийт 32 байгууллага
-  const submittedUnits = submittedUnitIds.size;
-  const totalUnits = 32;
-  const rate = submittedUnits / totalUnits * 100;
+  const submittedUnits=submittedUnitIds.size;
+  const totalUnits=32;
+  const rate=submittedUnits/totalUnits*100;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0),missingUnits=Math.max(0,totalUnits-submittedUnits),yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
   if($("dashSubmittedUnits"))$("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   if($("dashSubmissionRate"))$("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
