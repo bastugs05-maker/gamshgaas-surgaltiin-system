@@ -209,14 +209,14 @@ async function loadDashboard(){
  const y=Number($("dashYear").value||new Date().getFullYear()),[from,to]=dashRange(y,$("dashPeriod").value);
  message("dashStatus","Dashboard мэдээлэл тооцож байна...");
  try{
-  const [rec,prov,unitsResult,plans]=await Promise.all([
+  const [rec,prov,unitsResult,plans,reportsResult]=await Promise.all([
    sb.from("training_records").select("province_id,participant_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
    sb.from("provinces").select("id,name").order("id"),
    sb.from("units").select("id,name,province_id").order("name"),
    sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y),
    sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y)
   ]);
-  if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(unitsResult.error)throw unitsResult.error;if(plans.error)throw plans.error;
+  if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(unitsResult.error)throw unitsResult.error;if(plans.error)throw plans.error;if(reportsResult.error)throw reportsResult.error;
   const all=rec.data||[],approved=all.filter(r=>r.review_status==="Баталгаажсан"),pending=all.filter(r=>["Илгээсэн","Хүлээгдэж буй","Хяналтад"].includes(r.review_status));
   if($("dashTrainings"))$("dashTrainings").textContent=all.length.toLocaleString();if($("dashPeople"))$("dashPeople").textContent=all.reduce((s,r)=>s+Number(r.participant_total||0),0).toLocaleString();if($("dashApproved"))$("dashApproved").textContent=approved.length.toLocaleString();if($("dashPending"))$("dashPending").textContent=pending.length.toLocaleString();
   const a={},people={},ap={},pl={};approved.forEach(r=>{a[r.province_id]=(a[r.province_id]||0)+1;ap[r.province_id]=(ap[r.province_id]||0)+1;people[r.province_id]=(people[r.province_id]||0)+Number(r.participant_total||0)});all.forEach(r=>{if(r.review_status!=="Баталгаажсан")a[r.province_id]=(a[r.province_id]||0)+0});(plans.data||[]).forEach(r=>pl[r.province_id]=(pl[r.province_id]||0)+Number(r.planned_trainings||0));
@@ -224,11 +224,9 @@ async function loadDashboard(){
   if($("dashProvinceTable"))$("dashProvinceTable").innerHTML=rows.map(r=>`<tr><td>${r.name}</td><td>${r.actual}</td><td>${r.people}</td><td>${r.actual}</td><td>${r.pct===null?"—":r.pct.toFixed(1)+"%"}</td></tr>`).join("");
   const max=Math.max(1,...rows.map(r=>r.actual));if($("dashProvinceBars"))$("dashProvinceBars").innerHTML=rows.filter(r=>r.actual||r.planned).map(r=>`<div style="display:grid;grid-template-columns:120px 1fr 50px;gap:8px;align-items:center"><span>${r.name}</span><div style="height:16px;background:#e5eaf0;border-radius:5px"><div style="height:16px;width:${r.actual/max*100}%;background:#16834a;border-radius:5px"></div></div><b>${r.actual}</b></div>`).join("");
   if(arguments.length===0){} // keep this function compatible with existing refresh controls
-  const rpt=arguments; // unused; report result is read from the query below
-  const reportsResult=await sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y);
-  if(reportsResult.error)throw reportsResult.error;
   const period=$("dashPeriod").value;
   const filteredReports=(reportsResult.data||[]).filter(r=>{if(period==="all")return true;if(period.startsWith("q"))return Number(r.report_quarter)===Number(period.slice(1));if(period.startsWith("h"))return Number(r.report_half)===Number(period.slice(1));return true});
+  const submitted=filteredReports;
   // Approved report performance table: only admin-confirmed reports count.
   const approvedReports=(reportsResult.data||[]).filter(r=>r.review_status==="Баталгаажсан");
   const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
