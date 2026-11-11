@@ -250,11 +250,14 @@ async function loadDashboard(){
     return /аймгийн\s*онцгой\s*байдлын\s*газар/.test(n)||/дүүргийн\s*онцгой\s*байдлын\s*газар/.test(n);
   };
   const targetUnits=(unitResult.data||[]).filter(isTargetOrg),targetUnitIds=new Set(targetUnits.map(u=>String(u.id)));
-  const unitReportCounts={},unitTrainingCounts={};
-  submitted.forEach(r=>{if(r.unit_id!=null&&targetUnitIds.has(String(r.unit_id)))unitReportCounts[String(r.unit_id)]=(unitReportCounts[String(r.unit_id)]||0)+1});
-  all.forEach(r=>{if(r.unit_id!=null&&targetUnitIds.has(String(r.unit_id)))unitTrainingCounts[String(r.unit_id)]=(unitTrainingCounts[String(r.unit_id)]||0)+1});
-  const comparison=targetUnits.map(u=>({id:u.id,name:u.name,reports:unitReportCounts[String(u.id)]||0,trainings:unitTrainingCounts[String(u.id)]||0,hasReport:(unitReportCounts[String(u.id)]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=new Set(submitted.filter(r=>r.unit_id!=null&&targetUnitIds.has(String(r.unit_id))).map(r=>String(r.unit_id))).size;
+  // Ижил нэртэй unit бичлэгүүдийг нэг байгууллага болгон нэгтгэнэ.
+  const normOrgName=n=>String(n||"").trim().replace(/\\s+/g," ").toLocaleLowerCase("mn");
+  const orgByName=new Map();
+  targetUnits.forEach(u=>{const key=normOrgName(u.name);if(!orgByName.has(key))orgByName.set(key,{id:u.id,name:String(u.name||"").trim(),unitIds:new Set(),reports:0,trainings:0});orgByName.get(key).unitIds.add(String(u.id));});
+  submitted.forEach(r=>{const org=[...orgByName.values()].find(o=>r.unit_id!=null&&o.unitIds.has(String(r.unit_id)));if(org)org.reports++;});
+  all.forEach(r=>{const org=[...orgByName.values()].find(o=>r.unit_id!=null&&o.unitIds.has(String(r.unit_id)));if(org)org.trainings++;});
+  const comparison=[...orgByName.values()].map(o=>({...o,hasReport:o.reports>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  const submittedUnits=comparison.filter(o=>o.hasReport).length;
   const totalUnits=32,rate=submittedUnits/totalUnits*100;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
@@ -265,7 +268,7 @@ async function loadDashboard(){
   if($("dashSubmittedUnits"))$("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   if($("dashMissingUnits"))$("dashMissingUnits").textContent=missingUnits.toLocaleString()+" байгууллага";
   if($("dashYearPerformance"))$("dashYearPerformance").textContent=yearPerformance;
-  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
+  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison:comparison.map(({unitIds,...o})=>o)};
   if($("cmpSubmitted"))$("cmpSubmitted").textContent=submittedUnits+" / "+totalUnits;if($('cmpRate'))$('cmpRate').textContent=rate.toFixed(1)+"%";if($('cmpReports'))$('cmpReports').textContent=submitted.length.toLocaleString();if($('cmpTrainings'))$('cmpTrainings').textContent=all.length.toLocaleString();
   const maxReports=Math.max(1,...comparison.map(r=>r.reports));if($('cmpBars'))$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
   if($('cmpTable'))$('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
