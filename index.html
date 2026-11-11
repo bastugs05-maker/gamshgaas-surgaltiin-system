@@ -243,26 +243,34 @@ async function loadDashboard(){
     }
   });
   all.forEach(r=>{if(r.unit_id!==null&&r.unit_id!==undefined){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1;}});
-  // Харьцуулалтын мөр:
-  //  - Аймаг бүр -> province_id-аар нэгтгэнэ (сумын бүртгэл ч аймагтаа тооцогдоно).
-  //  - Улаанбаатар -> доторх дүүрэг/байгууллага бүрийг unit_id-аар тусад нь харуулна.
-  //  - Давхар нэртэй байгууллагыг (116-р анги, НОБГ) нэг мөрөнд нэгтгэнэ.
+  // ===== 32 байгууллагын харьцуулалт (тогтмол жагсаалт) =====
+  // 21 аймаг -> province_id-аар (сумын бүртгэл аймагтаа тооцогдоно)
+  // 9 дүүрэг, НОБГ, 116-р анги -> аймаг биш бүртгэлийн нэгж/байгууллагын нэрээр
+  const AIMAGS=["Архангай","Баян-Өлгий","Баянхонгор","Булган","Говь-Алтай","Говьсүмбэр","Дархан-Уул","Дорноговь","Дорнод","Дундговь","Завхан","Орхон","Өвөрхангай","Өмнөговь","Сүхбаатар","Сэлэнгэ","Төв","Увс","Ховд","Хөвсгөл","Хэнтий"];
+  const DISTRICTS=["Багануур","Багахангай","Баянгол","Баянзүрх","Налайх","Сонгинохайрхан","Сүхбаатар","Хан-Уул","Чингэлтэй"];
   const lc=s=>String(s||"").toLocaleLowerCase("mn").replace(/[\s\-–—]+/g," ").trim();
-  const orgKey=name=>{const n=lc(name);
-    if(/116/.test(n)&&n.includes("гамшгаас"))return "org:116";
-    if(n.includes("нийслэлийн онцгой байдлын газар"))return "org:nobg";
-    return "name:"+n.replace(/\s*(аймгийн|дүүргийн)?\s*онцгой байдлын газар$/,"").replace(/\s*(аймаг|дүүрэг)$/,"").trim();};
-  const isUB=p=>lc(p.name).includes("улаанбаатар");
-  const ubIds=new Set((prov.data||[]).filter(isUB).map(p=>String(p.id)));
-  const cmpMap=new Map(),provKey={},unitKey={};
-  const addRow=(key,name)=>{if(!cmpMap.has(key))cmpMap.set(key,{id:key,name,reports:0,trainings:0});return key};
-  (prov.data||[]).forEach(p=>{if(!ubIds.has(String(p.id)))provKey[String(p.id)]=addRow(orgKey(p.name),p.name)});
-   (unitsRes.data||[]).forEach(u=>{if(ubIds.has(String(u.province_id))){let k=orgKey(u.name);if(k.startsWith("name:"))k="ub:"+k;unitKey[String(u.id)]=addRow(k,u.name)}});
-  const keyOf=r=>{const pid=String(r.province_id);if(ubIds.has(pid))return r.unit_id!=null?unitKey[String(r.unit_id)]:null;return provKey[pid]};
-  submitted.forEach(r=>{const k=keyOf(r);if(k&&cmpMap.has(k))cmpMap.get(k).reports++});
-  all.forEach(r=>{const k=keyOf(r);if(k&&cmpMap.has(k))cmpMap.get(k).trainings++});
-  const comparison=[...cmpMap.values()].map(x=>({...x,hasReport:x.reports>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=comparison.filter(x=>x.hasReport).length,totalUnits=comparison.length||32,rate=submittedUnits/totalUnits*100;
+  const aimagOf=name=>{const n=lc(name).replace(/\s*(аймгийн\s*онцгой\s*байдлын\s*газар|аймаг)$/,"").trim();return AIMAGS.find(a=>lc(a)===n)||null};
+  const distOf=name=>{const n=lc(name).replace(/\s*(дүүргийн\s*онцгой\s*байдлын\s*газар|дүүрэг)$/,"").trim();return DISTRICTS.find(d=>lc(d)===n)||null};
+  const specialOf=name=>{const n=lc(name);if(/116/.test(n)&&n.includes("гамшгаас"))return "S:116";if(n.includes("нийслэлийн онцгой байдлын газар"))return "S:NOBG";return null};
+  const cmpRows=new Map();
+  AIMAGS.forEach(a=>cmpRows.set("A:"+a,{id:"A:"+a,name:a,reports:0,trainings:0}));
+  DISTRICTS.forEach(d=>cmpRows.set("D:"+d,{id:"D:"+d,name:d+" дүүрэг",reports:0,trainings:0}));
+  cmpRows.set("S:NOBG",{id:"S:NOBG",name:"Нийслэлийн Онцгой байдлын газар",reports:0,trainings:0});
+  cmpRows.set("S:116",{id:"S:116",name:"Гамшгаас хамгаалах сургалтын 116 дугаар анги",reports:0,trainings:0});
+  const provName={},unitName={};
+  (prov.data||[]).forEach(p=>provName[String(p.id)]=p.name);
+  (unitsRes.data||[]).forEach(u=>unitName[String(u.id)]=u.name);
+  const rowKeyOf=r=>{
+    const pn=provName[String(r.province_id)]||"",un=r.unit_id!=null?(unitName[String(r.unit_id)]||""):"";
+    const a=aimagOf(pn);if(a)return "A:"+a;                       // аймгийн аль ч сум
+    const s=specialOf(un)||specialOf(pn);if(s)return s;           // НОБГ, 116-р анги
+    const d=distOf(un);if(d)return "D:"+d;                        // нийслэлийн дүүрэг
+    return null;
+  };
+  submitted.forEach(r=>{const k=rowKeyOf(r);if(k)cmpRows.get(k).reports++});
+  all.forEach(r=>{const k=rowKeyOf(r);if(k)cmpRows.get(k).trainings++});
+  const comparison=[...cmpRows.values()].map(x=>({...x,hasReport:x.reports>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  const submittedUnits=comparison.filter(x=>x.hasReport).length,totalUnits=32,rate=submittedUnits/totalUnits*100;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
   if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
@@ -804,9 +812,6 @@ $("statYear").onchange=loadStatistics;
 $("statProvince").onchange=loadStatistics;
 $("reviewRefresh").onclick=loadReviewQueue;
 $("fileDownloadBtn").onclick=downloadActiveFile;
-$("fileCloseBtn").onclick=closeFileModal;
-async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
-</script></body></html>
 $("fileCloseBtn").onclick=closeFileModal;
 async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ачаалагдсангүй. Интернетээ шалгана уу.");sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);let x=await sb.auth.getSession();if(x.error)throw x.error;if(x.data.session){currentUser=x.data.session.user;await showApp()}}catch(e){message("loginStatus","Системийн алдаа: "+safeError(e),"error")}}init();
 </script></body></html>
