@@ -235,7 +235,7 @@ async function loadDashboard(){
   // Харьцуулалтыг өмнөх зөв бүтэцтэй адил provinces хүснэгтийн 32 мөрөөр байгуулна.
   // units хүснэгтийн 323 сум/дүүргийн мөрийг энд жагсаахгүй.
   const reportCountsByProvince={}, trainingCountsByProvince={}, submittedProvinceIds=new Set();
-  submitted.forEach(r=>{
+  filteredReports.forEach(r=>{
     if(r.province_id!=null){
       const k=String(r.province_id);
       reportCountsByProvince[k]=(reportCountsByProvince[k]||0)+1;
@@ -258,12 +258,12 @@ async function loadDashboard(){
   const submittedUnits=comparison.filter(u=>u.hasReport).length,totalUnits=comparison.length,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const yearPerformance=`${all.length} сургалт / ${all.reduce((s,r)=>s+Number(r.participant_total||0),0)} хүн`;
-  if($("dashTotalReports"))$("dashTotalReports").textContent=submitted.length.toLocaleString();
+  if($("dashTotalReports"))$("dashTotalReports").textContent=filteredReports.length.toLocaleString();
   if($("dashSubmittedUnits"))$("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   if($("dashMissingUnits"))$("dashMissingUnits").textContent=missingUnits.toLocaleString()+" байгууллага";
   if($("dashYearPerformance"))$("dashYearPerformance").textContent=yearPerformance;
-  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople:all.reduce((s,r)=>s+Number(r.participant_total||0),0),approved:approved.length,pending:pending.length,submittedUnits,totalUnits,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
-  if($("cmpSubmitted"))$("cmpSubmitted").textContent=submittedUnits+" / "+totalUnits;if($('cmpRate'))$('cmpRate').textContent=rate.toFixed(1)+"%";if($('cmpReports'))$('cmpReports').textContent=submitted.length.toLocaleString();if($('cmpTrainings'))$('cmpTrainings').textContent=all.length.toLocaleString();
+  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople:all.reduce((s,r)=>s+Number(r.participant_total||0),0),approved:approved.length,pending:pending.length,submittedUnits,totalUnits,submissionRate:rate,totalReports:filteredReports.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
+  if($("cmpSubmitted"))$("cmpSubmitted").textContent=submittedUnits+" / "+totalUnits;if($('cmpRate'))$('cmpRate').textContent=rate.toFixed(1)+"%";if($('cmpReports'))$('cmpReports').textContent=filteredReports.length.toLocaleString();if($('cmpTrainings'))$('cmpTrainings').textContent=all.length.toLocaleString();
   const maxReports=Math.max(1,...comparison.map(r=>r.reports));if($('cmpBars'))$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
   if($('cmpTable'))$('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
