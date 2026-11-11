@@ -245,21 +245,24 @@ async function loadDashboard(){
   const isSubUnit=u=>/сум|баг/.test(normName(u.name));
   const isSpecial116=u=>normName(u.name).includes("116") && normName(u.name).includes("гамшгаас хамгаалах");
   const isDistrict=u=>/дүүрэг/.test(normName(u.name));
-  const isHQCandidate=u=>!isSubUnit(u)&&!isDistrict(u)&&!isSpecial116(u)&&
-      /(онцгой байдлын газар|онцгой байдлын хэлтэс|гамшгаас хамгаалах газар|гамшгаас хамгаалах хэлтэс|обг|обх)/.test(normName(u.name));
+  const isHQCandidate=u=>!isSubUnit(u)&&!isDistrict(u)&&!isSpecial116(u);
   const picked=[];
-  // Province table is the source of truth: one HQ unit per each of 21 aimags + UB.
+  // Нэг province_id-д харьяалагдах дээд байгууллагыг заавал нэрийн regex-ээр хасахгүй.
+  // Эхлээд газар/хэлтэс/ОБГ нэртэйг сонгоно; ийм нэр олдохгүй бол тухайн аймгийн
+  // сум/баг биш үндсэн байгууллагыг fallback болгон авна.
   provinceList.forEach(pr=>{
     const pn=normName(pr.name);
-    let candidates=allUnits.filter(u=>String(u.province_id)===String(pr.id)&&isHQCandidate(u));
-    // Prefer explicit province name match; do not substitute sum/bag or district units.
-    const exact=candidates.filter(u=>normName(u.name).includes(pn));
-    if(exact.length)candidates=exact;
-    candidates.sort((a,b)=>{
-      const score=u=>{const n=normName(u.name);return n.includes("онцгой байдлын газар")?0:n.includes("онцгой байдлын хэлтэс")?1:n.includes("обг")?2:3};
-      return score(a)-score(b)||a.name.localeCompare(b.name,"mn");
-    });
-    if(candidates[0])picked.push(candidates[0]);
+    const candidates=allUnits.filter(u=>String(u.province_id)===String(pr.id)&&isHQCandidate(u));
+    const scored=candidates.map(u=>{
+      const n=normName(u.name);
+      let score=100;
+      if(n.includes(pn)) score-=40;
+      if(/онцгой байдлын газар|гамшгаас хамгаалах газар|обг/.test(n)) score-=30;
+      if(/онцгой байдлын хэлтэс|гамшгаас хамгаалах хэлтэс|обх/.test(n)) score-=20;
+      if(/нийслэл/.test(n)&&!pn.includes('улаанбаатар')) score+=50;
+      return {u,score};
+    }).sort((a,b)=>a.score-b.score||String(a.u.name).localeCompare(String(b.u.name),'mn'));
+    if(scored.length) picked.push(scored[0].u);
   });
   // All nine district HQs and the special 116th unit.
   allUnits.filter(u=>!isSubUnit(u)&&(isDistrict(u)||isSpecial116(u))).forEach(u=>picked.push(u));
