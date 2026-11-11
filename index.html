@@ -209,13 +209,14 @@ async function loadDashboard(){
  const y=Number($("dashYear").value||new Date().getFullYear()),[from,to]=dashRange(y,$("dashPeriod").value);
  message("dashStatus","Dashboard мэдээлэл тооцож байна...");
  try{
-  const [rec,prov,plans,unitsRes]=await Promise.all([
+  const [rec,prov,plans]=await Promise.all([
    sb.from("training_records").select("province_id,unit_id,participant_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
    sb.from("provinces").select("id,name").order("id"),
    sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y),
-   sb.from("units").select("id,name,province_id").order("name")
+   sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y)
   ]);
-  if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(plans.error)throw plans.error;if(unitsRes.error)throw unitsRes.error;
+  const orgResult=await sb.from("units").select("id,name,province_id").order("name");
+  if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(plans.error)throw plans.error;if(orgResult.error)throw orgResult.error;
   const all=rec.data||[],approved=all.filter(r=>r.review_status==="Баталгаажсан"),pending=all.filter(r=>["Илгээсэн","Хүлээгдэж буй","Хяналтад"].includes(r.review_status));
   if($("dashTrainings"))$("dashTrainings").textContent=all.length.toLocaleString();if($("dashPeople"))$("dashPeople").textContent=all.reduce((s,r)=>s+Number(r.participant_total||0),0).toLocaleString();if($("dashApproved"))$("dashApproved").textContent=approved.length.toLocaleString();if($("dashPending"))$("dashPending").textContent=pending.length.toLocaleString();
   const a={},people={},ap={},pl={};approved.forEach(r=>{a[r.province_id]=(a[r.province_id]||0)+1;ap[r.province_id]=(ap[r.province_id]||0)+1;people[r.province_id]=(people[r.province_id]||0)+Number(r.participant_total||0)});all.forEach(r=>{if(r.review_status!=="Баталгаажсан")a[r.province_id]=(a[r.province_id]||0)+0});(plans.data||[]).forEach(r=>pl[r.province_id]=(pl[r.province_id]||0)+Number(r.planned_trainings||0));
@@ -235,37 +236,21 @@ async function loadDashboard(){
   // Тайлангийн нэгжийг province_id биш unit_id-аар тоолно.
   // Улаанбаатар province_id=22 мөн адил жагсаалтад орно.
   const submitted=filteredReports.filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
-  // Байгууллагын 32 мөрийг units хүснэгтийн ID-аар тооцно; provinces нь 22 аймаг/нийслэл.
-  const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
-  submitted.forEach(r=>{
-    if(r.unit_id!==null&&r.unit_id!==undefined){
-      const k=String(r.unit_id);reportCounts[k]=(reportCounts[k]||0)+1;submittedUnitIds.add(k);
-    }
+  // Dashboard байгууллагын жагсаалт: 21 аймаг + НОБГ + 9 дүүрэг + 116-р анги = 32.
+  // Сумдын нэгжийг оруулахгүй; нэр давхардсан байгууллагыг нэг мөр болгоно.
+  const orgs=(orgResult.data||[]).filter(u=>{
+    const n=String(u.name||"").trim();
+    return n==="Гамшгаас хамгаалах 116-р анги" ||
+      (n.includes("Онцгой байдлын газар") && !n.includes("сургалтын")) ||
+      (n.includes("Онцгой байдлын хэлтэс") && n.includes("дүүрэг"));
   });
-  all.forEach(r=>{if(r.unit_id!==null&&r.unit_id!==undefined){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1;}});
-  const units=[...new Map((unitsRes.data||[]).map(u=>[String(u.id),u])).values()];
-  // Зөвхөн 21 аймаг + НОБГ + 9 дүүрэг + 116-р анги (32 үндсэн байгууллага).
-  // Dashboard comparison: exactly 21 provinces + NOBG + 9 districts + 116 unit = 32.
-  // Training-center 116 and duplicate/legacy district rows are intentionally excluded.
-  const provinceNames=[
-    "Архангай","Баян-Өлгий","Баянхонгор","Булган","Говь-Алтай","Говьсүмбэр",
-    "Дархан-Уул","Дорноговь","Дорнод","Дундговь","Завхан","Орхон",
-    "Өвөрхангай","Өмнөговь","Сүхбаатар","Сэлэнгэ","Төв","Увс","Ховд","Хөвсгөл","Хэнтий"
-  ];
-  const cityNames=[
-    "Нийслэлийн Онцгой байдлын газар","Гамшгаас хамгаалах 116-р анги",
-    "Багануур","Багахангай","Баянгол дүүрэг","Баянзүрх дүүрэг",
-    "Сонгинохайрхан дүүрэг","Сүхбаатар дүүрэг","Хан-Уул дүүрэг",
-    "Чингэлтэй дүүрэг","Налайх"
-  ];
-  const wantedNames=new Set([...provinceNames,...cityNames]);
-  const normalizeUnitName=n=>String(n||"").trim().replace(/\s+/g," ");
-  // Prefer exact canonical names; if DB has duplicate records with same name, display once.
-  const mainUnits=(units||[]).filter(u=>wantedNames.has(normalizeUnitName(u.name)));
-  const uniqueMain=[...new Map(mainUnits.map(u=>[normalizeUnitName(u.name),u])).values()];
-  const comparison=uniqueMain.map(u=>({id:u.id,name:normalizeUnitName(u.name),reports:reportCounts[String(u.id)]||0,trainings:trainingCounts[String(u.id)]||0,hasReport:(reportCounts[String(u.id)]||0)>0})).sort((a,b)=>a.name.localeCompare(b.name,"mn"));
-  const mainUnitIds=new Set(uniqueMain.map(u=>String(u.id)));
-  const submittedUnits=[...submittedUnitIds].filter(id=>mainUnitIds.has(id)).length,totalUnits=provinceNames.length+cityNames.length,rate=totalUnits?submittedUnits/totalUnits*100:0;
+  const uniqueOrgs=[],seenNames=new Set();
+  orgs.forEach(u=>{const key=String(u.name||"").toLocaleLowerCase("mn").replace(/\\s+/g," ").trim();if(!seenNames.has(key)){seenNames.add(key);uniqueOrgs.push(u)}});
+  const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
+  submitted.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);reportCounts[k]=(reportCounts[k]||0)+1;submittedUnitIds.add(k)}});
+  all.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1}});
+  const comparison=uniqueOrgs.map(u=>({id:u.id,province_id:u.province_id,name:u.name,reports:reportCounts[String(u.id)]||0,trainings:trainingCounts[String(u.id)]||0,hasReport:(reportCounts[String(u.id)]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  const submittedUnits=comparison.filter(u=>u.hasReport).length,totalUnits=32,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
   if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
