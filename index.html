@@ -244,8 +244,18 @@ async function loadDashboard(){
   });
   all.forEach(r=>{if(r.unit_id!==null&&r.unit_id!==undefined){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1;}});
   const units=[...new Map((unitsRes.data||[]).map(u=>[String(u.id),u])).values()];
-  const comparison=units.map(u=>({id:u.id,name:u.name,reports:reportCounts[String(u.id)]||0,trainings:trainingCounts[String(u.id)]||0,hasReport:(reportCounts[String(u.id)]||0)>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=submittedUnitIds.size,totalUnits=units.length,rate=totalUnits?submittedUnits/totalUnits*100:0;
+  // Зөвхөн 21 аймаг + НОБГ + 9 дүүрэг + 116-р анги (32 үндсэн байгууллага).
+  const mainNames=new Set([
+    "Архангай","Баян-Өлгий","Баянхонгор","Булган","Говь-Алтай","Говьсүмбэр","Дархан-Уул","Дорноговь","Дорнод","Дундговь","Завхан","Орхон","Өвөрхангай","Өмнөговь","Сүхбаатар","Сэлэнгэ","Төв","Увс","Ховд","Хөвсгөл","Хэнтий",
+    "Нийслэлийн Онцгой байдлын газар","Гамшгаас хамгаалах 116-р анги","Гамшгаас хамгаалах сургалтын 116 дугаар анги",
+    "Багануур","Багахангай","Баянгол дүүрэг","Баянзүрх дүүрэг","Сонгинохайрхан дүүрэг","Сүхбаатар дүүрэг","Хан-Уул дүүрэг","Чингэлтэй дүүрэг","Налайх","Баянгол","Баянзүрх"
+  ]);
+  const mainUnits=units.filter(u=>mainNames.has(String(u.name||"").trim()));
+  // Нэр ижил сум/дүүрэг холилдохоос сэргийлж, үндсэн байгууллагын нэрийг unique болгож харуулна.
+  const uniqueMain=[...new Map(mainUnits.map(u=>[String(u.name).trim(),u])).values()];
+  const comparison=uniqueMain.map(u=>({id:u.id,name:u.name,reports:reportCounts[String(u.id)]||0,trainings:trainingCounts[String(u.id)]||0,hasReport:(reportCounts[String(u.id)]||0)>0})).sort((a,b)=>a.name.localeCompare(b.name,"mn"));
+  const mainUnitIds=new Set(uniqueMain.map(u=>String(u.id)));
+  const submittedUnits=[...submittedUnitIds].filter(id=>mainUnitIds.has(id)).length,totalUnits=32,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
   if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
