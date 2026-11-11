@@ -250,15 +250,20 @@ async function loadDashboard(){
       trainingCountByUnit[uid]=(trainingCountByUnit[uid]||0)+1;
     }
   });
-  // units хүснэгтийн id/name-ийг шууд ашиглана. Нэрээр тааруулахгүй.
-  const comparison=(unitsResult.data||[]).map(u=>{
-    const uid=String(u.id);
-    const reports=reportCountByUnit[uid]||0;
-    const trainings=trainingCountByUnit[uid]||0;
-    return {id:u.id,name:u.name,reports,trainings,hasReport:reports>0};
+  // Dashboard дээр зөвхөн 21 аймаг + Улаанбаатарын мөр гаргана.
+  // Нийслэлийн ОБГ болон 116-р ангийн тайланг УБ аймгийн мөрөнд нэгтгэхгүй.
+  const normUnitName=v=>String(v||"").toLowerCase().replace(/[^а-яөүёa-z0-9]/g,"");
+  const unitRows=unitsResult.data||[];
+  const comparison=(prov.data||[]).map(p=>{
+    const pName=normUnitName(p.name);
+    const ownUnit=unitRows.find(u=>Number(u.province_id)===Number(p.id)&&normUnitName(u.name)===pName);
+    const uid=ownUnit?String(ownUnit.id):null;
+    const reports=uid?(reportCountByUnit[uid]||0):0;
+    const trainings=uid?(trainingCountByUnit[uid]||0):0;
+    return {id:p.id,name:p.name,reports,trainings,hasReport:reports>0};
   }).sort((x,y)=>y.reports-x.reports||x.name.localeCompare(y.name,"mn"));
-  // 32 нэгжийн суурь тоо UI-д тогтоосон; нэгжийн ID давхардалгүй тайлан ирүүлснийг тоолно.
-  const totalUnits=comparison.length,submittedUnits=submittedUnitIds.size,rate=totalUnits?submittedUnits/totalUnits*100:0;
+  // KPI: 33 тайлан ирүүлэх байгууллага; аймгийн график 22 мөртэй.
+  const totalUnits=33,submittedUnits=submittedUnitIds.size,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
   if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   if($("dashSubmissionRate")) $("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
