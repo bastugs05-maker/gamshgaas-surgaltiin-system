@@ -257,7 +257,7 @@ async function loadDashboard(){
   const cmpMap=new Map(),provKey={},unitKey={};
   const addRow=(key,name)=>{if(!cmpMap.has(key))cmpMap.set(key,{id:key,name,reports:0,trainings:0});return key};
   (prov.data||[]).forEach(p=>{if(!ubIds.has(String(p.id)))provKey[String(p.id)]=addRow(orgKey(p.name),p.name)});
-  (unitsRes.data||[]).forEach(u=>{if(ubIds.has(String(u.province_id)))unitKey[String(u.id)]=addRow(orgKey(u.name),u.name)});
+   (unitsRes.data||[]).forEach(u=>{if(ubIds.has(String(u.province_id))){let k=orgKey(u.name);if(k.startsWith("name:"))k="ub:"+k;unitKey[String(u.id)]=addRow(k,u.name)}});
   const keyOf=r=>{const pid=String(r.province_id);if(ubIds.has(pid))return r.unit_id!=null?unitKey[String(r.unit_id)]:null;return provKey[pid]};
   submitted.forEach(r=>{const k=keyOf(r);if(k&&cmpMap.has(k))cmpMap.get(k).reports++});
   all.forEach(r=>{const k=keyOf(r);if(k&&cmpMap.has(k))cmpMap.get(k).trainings++});
