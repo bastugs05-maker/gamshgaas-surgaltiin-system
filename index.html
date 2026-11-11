@@ -236,12 +236,20 @@ async function loadDashboard(){
   const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
   const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).filter(p=>String(p.name||"").trim()!=="Улаанбаатар").map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
   // Байгууллагын хүснэгт: зөвхөн units-ийн 32 үндсэн мөр; тайлан/сургалтыг unit_id-аар нэгтгэнэ.
-  const baseUnits=(units.data||[]).filter(u=>Number(u.province_id)===22?["Нийслэлийн Онцгой байдлын газар","Гамшгаас хамгаалах 116-р анги"].includes(String(u.name||"").trim()):true);
+  // Зөвхөн 21 аймгийн төв байгууллага + УБ-ын 9 дүүрэг + 2 тусгай байгууллага.
+  // Аймгийн доторх сум/салбар нэгжүүдийг жагсаалтаас хасна.
+  const aimagNames=new Set((prov.data||[]).filter(p=>Number(p.id)!==22).map(p=>String(p.name||"").trim()));
+  const ubNames=new Set(["Багануур","Багахангай","Баянгол дүүрэг","Баянзүрх дүүрэг","Налайх","Сонгинохайрхан","Сүхбаатар дүүрэг","Хан-Уул","Чингэлтэй"]);
+  const specialNames=new Set(["Нийслэлийн Онцгой байдлын газар","Гамшгаас хамгаалах 116-р анги","Гамшгаас хамгаалах сургалтын 116 дугаар анги"]);
+  const baseUnits=(units.data||[]).filter(u=>{
+    const nm=String(u.name||"").trim();
+    return aimagNames.has(nm)||ubNames.has(nm)||specialNames.has(nm);
+  });
   const unitReportCounts={},unitTrainingCounts={},submittedUnitIds=new Set();
   submitted.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);unitReportCounts[k]=(unitReportCounts[k]||0)+1;submittedUnitIds.add(k);}});
   all.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);unitTrainingCounts[k]=(unitTrainingCounts[k]||0)+1;}});
   const comparison=baseUnits.map(u=>{const k=String(u.id),reports=unitReportCounts[k]||0,trainings=unitTrainingCounts[k]||0;return {id:u.id,name:u.name,reports,trainings,hasReport:reports>0};}).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=submittedUnitIds.size,totalUnits=32,rate=submittedUnits/totalUnits*100;
+  const submittedUnits=submittedUnitIds.size,totalUnits=baseUnits.length,rate=submittedUnits/Math.max(1,totalUnits)*100;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0),missingUnits=Math.max(0,totalUnits-submittedUnits),yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
   if($("dashSubmittedUnits"))$("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   if($("dashSubmissionRate"))$("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
