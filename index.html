@@ -238,14 +238,33 @@ async function loadDashboard(){
   const submitted=filteredReports.filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
   // Dashboard байгууллагын жагсаалт: 21 аймаг + НОБГ + 9 дүүрэг + 116-р анги = 32.
   // Сумдын нэгжийг оруулахгүй; нэр давхардсан байгууллагыг нэг мөр болгоно.
-  const orgs=(orgResult.data||[]).filter(u=>{
-    const n=String(u.name||"").trim();
-    return n==="Гамшгаас хамгаалах 116-р анги" ||
-      (n.includes("Онцгой байдлын газар") && !n.includes("сургалтын")) ||
-      (n.includes("Онцгой байдлын хэлтэс") && n.includes("дүүрэг"));
+  // Зөвхөн 32 үндсэн байгууллага: 21 аймаг + УБ/НОБГ + 9 дүүрэг + 116-р анги.
+  // Аймаг бүрийн province_id-аар холбож, тухайн аймгийн төв байгууллагыг сонгоно.
+  const allUnits=orgResult.data||[], provinceList=prov.data||[];
+  const normName=v=>String(v||"").toLocaleLowerCase("mn").replace(/\\s+/g," ").trim();
+  const isDistrictUnit=u=>/дүүрэг/.test(normName(u.name)) && /онцгой|хэлтэс|газар/.test(normName(u.name));
+  const isMainProvUnit=(u,p)=>{
+    const n=normName(u.name), pn=normName(p.name);
+    if(!n||!pn||u.province_id!==p.id)return false;
+    if(/сум|баг/.test(n))return false;
+    return n===pn || n.includes(pn) || (/онцгой|гамш/.test(n)&&(/аймаг|нийслэл/.test(n)));
+  };
+  const picked=[];
+  // 21 аймаг болон Улаанбаатарын үндсэн байгууллагыг province бүрээс нэгээр сонгоно.
+  provinceList.forEach(p=>{
+    const candidates=allUnits.filter(u=>isMainProvUnit(u,p));
+    if(candidates.length){
+      candidates.sort((a,b)=>{
+        const score=u=>{const n=normName(u.name);return (n.includes("онцгой байдлын газар")?0:n.includes("онцгой")?1:n===normName(p.name)?2:3)};
+        return score(a)-score(b)||a.name.localeCompare(b.name,"mn");
+      });
+      picked.push(candidates[0]);
+    }
   });
-  const uniqueOrgs=[],seenNames=new Set();
-  orgs.forEach(u=>{const key=String(u.name||"").toLocaleLowerCase("mn").replace(/\\s+/g," ").trim();if(!seenNames.has(key)){seenNames.add(key);uniqueOrgs.push(u)}});
+  // Нийслэлийн 9 дүүрэг болон тусгай 116-р ангийг province_id-аас үл хамааран нэмнэ.
+  allUnits.filter(u=>isDistrictUnit(u)||normName(u.name)==="гамшгаас хамгаалах 116-р анги").forEach(u=>picked.push(u));
+  const uniqueOrgs=[],seenIds=new Set();
+  picked.forEach(u=>{if(!seenIds.has(String(u.id))){seenIds.add(String(u.id));uniqueOrgs.push(u)}});
   const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
   submitted.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);reportCounts[k]=(reportCounts[k]||0)+1;submittedUnitIds.add(k)}});
   all.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1}});
