@@ -240,17 +240,32 @@ async function loadDashboard(){
   // Сумдын нэгжийг оруулахгүй; нэр давхардсан байгууллагыг нэг мөр болгоно.
   // Зөвхөн 32 үндсэн байгууллага: 21 аймаг + УБ/НОБГ + 9 дүүрэг + 116-р анги.
   // Аймаг бүрийн province_id-аар холбож, тухайн аймгийн төв байгууллагыг сонгоно.
-  const allUnits=orgResult.data||[];
+  const allUnits=orgResult.data||[], provinceList=prov.data||[];
   const normName=v=>String(v||"").toLocaleLowerCase("mn").replace(/\\s+/g," ").trim();
-  // Dashboard-д аймаг/нийслэл, дүүргийн төв байгууллага + 116-р анги л гарна.
-  // Сум, багийн нэгжүүдийг хасна.
   const isSubUnit=u=>/сум|баг/.test(normName(u.name));
   const isSpecial116=u=>normName(u.name).includes("116") && normName(u.name).includes("гамшгаас хамгаалах");
   const isDistrict=u=>/дүүрэг/.test(normName(u.name));
-  const isProvinceHQ=u=>/аймаг|нийслэл/.test(normName(u.name)) && /онцгой|гамш|аврах/.test(normName(u.name));
-  const picked=allUnits.filter(u=>!isSubUnit(u)&&(isSpecial116(u)||isDistrict(u)||isProvinceHQ(u)));
-  const uniqueOrgs=[],seenNames=new Set();
-  picked.forEach(u=>{const key=normName(u.name);if(key&&!seenNames.has(key)){seenNames.add(key);uniqueOrgs.push(u)}});
+  const isHQCandidate=u=>!isSubUnit(u)&&!isDistrict(u)&&!isSpecial116(u)&&
+      /(онцгой байдлын газар|онцгой байдлын хэлтэс|гамшгаас хамгаалах газар|гамшгаас хамгаалах хэлтэс|обг|обх)/.test(normName(u.name));
+  const picked=[];
+  // Province table is the source of truth: one HQ unit per each of 21 aimags + UB.
+  provinceList.forEach(pr=>{
+    const pn=normName(pr.name);
+    let candidates=allUnits.filter(u=>String(u.province_id)===String(pr.id)&&isHQCandidate(u));
+    // Prefer explicit province name match; do not substitute sum/bag or district units.
+    const exact=candidates.filter(u=>normName(u.name).includes(pn));
+    if(exact.length)candidates=exact;
+    candidates.sort((a,b)=>{
+      const score=u=>{const n=normName(u.name);return n.includes("онцгой байдлын газар")?0:n.includes("онцгой байдлын хэлтэс")?1:n.includes("обг")?2:3};
+      return score(a)-score(b)||a.name.localeCompare(b.name,"mn");
+    });
+    if(candidates[0])picked.push(candidates[0]);
+  });
+  // All nine district HQs and the special 116th unit.
+  allUnits.filter(u=>!isSubUnit(u)&&(isDistrict(u)||isSpecial116(u))).forEach(u=>picked.push(u));
+  // Deduplicate by unit ID (not by display name, since different offices may share a name).
+  const uniqueOrgs=[],seenIds=new Set();
+  picked.forEach(u=>{const key=String(u.id);if(!seenIds.has(key)){seenIds.add(key);uniqueOrgs.push(u)}});
   const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
   submitted.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);reportCounts[k]=(reportCounts[k]||0)+1;submittedUnitIds.add(k)}});
   all.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1}});
