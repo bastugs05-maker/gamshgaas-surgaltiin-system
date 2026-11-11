@@ -1,0 +1,55 @@
+*{box-sizing:border-box}body{margin:0;font-family:Arial;background:#edf1f7;color:#263445}
+header{background:#285b94;color:white;text-align:center;padding:20px}.container{max-width:1100px;margin:20px auto;padding:12px}
+.card{background:white;padding:18px;border-radius:14px;margin-bottom:16px;box-shadow:0 4px 15px #0001}
+h2{color:#285b94}label{display:block;margin:12px 0 6px;font-weight:bold}
+input,select,textarea{width:100%;padding:11px;border:1px solid #ccd5df;border-radius:8px;font-size:16px}textarea{min-height:90px}
+button{padding:11px 15px;background:#285b94;color:white;border:0;border-radius:8px;margin:5px 3px;font-weight:bold;cursor:pointer}
+.secondary{background:#64748b}.danger{background:#c0392b}.green{background:#16834a}.hidden{display:none!important}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.message{margin-top:10px;font-weight:bold;overflow-wrap:anywhere}.success{color:green}.error{color:red}
+.table-wrap{overflow:auto}table{width:100%;min-width:750px;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #ddd;padding:9px;text-align:left}th{background:#285b94;color:white}
+.preview{width:100%;height:70vh;border:1px solid #ccd5df;border-radius:8px;background:#f8fafc}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.container{padding:8px}button{max-width:100%}}
+
+/* ===== edoc маягийн бүтэц ===== */
+body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#2f4f8f,#3c6fc1)}
+.login-card{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:420px;box-shadow:0 20px 50px #0003}
+.login-card .brand{font-size:34px;font-weight:300;color:#3b5bdb;letter-spacing:1px}.login-card .brand-sub{color:#64748b;margin:2px 0 18px}
+.app{display:flex;min-height:100vh}
+.sidebar{width:236px;flex:0 0 236px;background:#f1f3f7;border-right:1px solid #e3e7ee;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto}
+.logo{padding:18px 20px 22px}.logo-mark{display:block;font-size:34px;font-weight:300;color:#3b5bdb;letter-spacing:.5px;line-height:1}.logo-sub{font-size:12px;color:#64748b}
+#sideNav{flex:1;padding:0 10px}
+.nav-item,.nav-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 12px;margin:2px 0;border-radius:8px;color:#1f2937;font-weight:600;font-size:14px;text-decoration:none;background:none;border:0;cursor:pointer;text-align:left}
+.nav-item:hover,.nav-head:hover{background:#e6eaf2}.nav-item.active{background:#e2e8f5;color:#2f4f8f}
+.nav-head .chev{transition:transform .2s;font-size:12px;color:#64748b}.nav-group.open .chev{transform:rotate(90deg)}
+.nav-sub{display:none;padding:2px 0 6px 0}.nav-group.open .nav-sub{display:block}
+.nav-sub a{display:block;padding:7px 12px 7px 26px;border-radius:7px;color:#475569;font-size:13.5px;text-decoration:none;cursor:pointer}
+.nav-sub a:hover{background:#e6eaf2}.nav-sub a.active{color:#2f4f8f;font-weight:700;background:#e2e8f5}
+.ver{padding:14px 20px;font-size:12px;color:#64748b;border-top:1px solid #e3e7ee}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:50;background:#fff;height:58px;display:flex;align-items:center;gap:14px;padding:0 20px;box-shadow:0 2px 8px #0000000d}
+.icon-btn{background:none;color:#1f2937;font-size:22px;padding:4px 8px;margin:0}.icon-btn:hover{background:#f1f3f7}
+.top-title{font-size:19px;font-weight:600;flex:1}.top-user{display:flex;align-items:center;gap:10px;font-size:13px;color:#475569}.top-user button{margin:0;padding:8px 14px}
+.content{padding:22px;max-width:1300px;width:100%}
+.page-off{display:none!important}
+/* Нүүр — өнгөт самбар */
+.home-filter{display:flex;gap:10px;align-items:end;margin-bottom:16px;flex-wrap:wrap}.home-filter>div{min-width:160px}
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:22px}
+.panel{background:#fff;border:1px solid #e3e7ee;border-radius:4px;overflow:hidden;padding-bottom:22px}
+.panel-head{color:#fff;text-align:center;padding:16px 10px 70px}.panel-head h3{margin:0;font-size:19px}.panel-head small{font-weight:600}
+.teal .panel-head{background:#2ec4b6}.coral .panel-head{background:#ff6b6b}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:-56px 30px 0}
+.tile{background:#fff;border:1px solid #e3e7ee;text-align:center;padding:16px 8px;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:box-shadow .15s}
+.tile:hover{box-shadow:0 6px 16px #0000001a}.tile .lbl{font-size:13.5px;font-weight:600;color:#334155}.tile .val{font-size:20px;color:#334155}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:22px;margin-top:26px}
+.chart-card{background:#fff;border:1px solid #e3e7ee;border-radius:4px;padding:14px 16px;position:relative}
+.chart-top{display:flex;justify-content:center;align-items:center;position:relative}.chart-top h3{font-size:24px;font-weight:300;margin:6px 0;color:#1f2937}
+.menu-btn{position:absolute;right:0;top:4px;background:#fff;color:#333;border:1px solid #ccc;border-radius:4px;padding:3px 9px;font-size:18px;margin:0}
+.menu{position:absolute;right:0;top:40px;background:#fff;border:1px solid #ddd;box-shadow:0 6px 16px #0002;border-radius:4px;z-index:20;min-width:120px;padding:4px 0}
+.menu button{display:block;width:100%;text-align:left;background:none;color:#333;font-weight:400;margin:0;padding:7px 14px;border-radius:0}.menu button:hover{background:#eef2fb}.menu hr{margin:3px 0;border:0;border-top:1px solid #eee}
+.chart-svg svg{width:100%;height:auto;display:block}
+.overlay{display:none}
+@media(max-width:900px){.sidebar{position:fixed;left:0;top:0;z-index:100;transform:translateX(-100%);transition:transform .2s;box-shadow:4px 0 20px #0003}
+ .app.nav-open .sidebar{transform:none}.app.nav-open .overlay{display:block;position:fixed;inset:0;background:#0004;z-index:90}
+ .panels,.charts{grid-template-columns:1fr}.content{padding:12px}.top-user span{display:none}.tiles{margin:-56px 12px 0}}
