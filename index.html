@@ -63,7 +63,7 @@ body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
  .app.nav-open .sidebar{transform:none}.app.nav-open .overlay{display:block;position:fixed;inset:0;background:#0004;z-index:90}
  .panels,.charts{grid-template-columns:1fr}.content{padding:12px}.top-user span{display:none}.tiles{margin:-56px 12px 0}}
 </style></head><body>
-<section id="loginSection" class="login-wrap"><div class="login-card"><div class="brand">ГХС</div><div class="brand-sub">Гамшгаас хамгаалах сургалтын систем</div><h2>Системд нэвтрэх</h2><label>И-мэйл</label><input id="email" type="email" autocomplete="username"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn" style="width:100%;margin:16px 0 0">Нэвтрэх</button><div id="loginStatus" class="message"></div></div></section>
+<section id="loginSection" class="login-wrap"><div class="login-card"><div class="brand">ГХС</div><div class="brand-sub">Гамшгаас хамгаалах сургалтын систем</div><h2>Системд нэвтрэх</h2><label>И-мэйл</label><input id="email" type="email" autocomplete="username"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn" style="width:100%;margin:16px 0 0">Нэвтрэх</button><button id="forgotBtn" type="button" style="background:none;color:#2f4f8f;padding:8px 0;margin:6px 0 0;font-weight:600">Нууц үгээ мартсан уу?</button><div id="loginStatus" class="message"></div></div></section>
 <div id="appSection" class="app hidden">
 <aside class="sidebar">
  <div class="logo"><span class="logo-mark">ГХС</span><span class="logo-sub">Гамшгаас хамгаалах сургалтын систем</span></div>
@@ -75,13 +75,12 @@ body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
   <div class="nav-group open"><button class="nav-head">Сургалт <span class="chev">▶</span></button><div class="nav-sub">
    <a data-go="trainingForm">Сургалт бүртгэх</a><a data-go="trainingList">Сургалтын бүртгэлүүд</a><a data-go="stats">Статистик</a></div></div>
   <a class="nav-item" data-go="plan">Сургалтын төлөвлөгөө</a>
-  <a class="nav-item" data-go="admin">Админ</a>
  </nav>
  <div class="ver">Хувилбар 2.0 © ОБЕГ</div>
 </aside>
 <div class="overlay" id="navOverlay"></div>
 <div class="main">
- <div class="topbar"><button id="navToggle" class="icon-btn" title="Цэс">☰</button><div class="top-title" id="pageTitle">Нүүр</div><div class="top-user"><span id="userInfo"></span><button id="logoutBtn" class="secondary">Гарах</button></div></div>
+ <div class="topbar"><button id="navToggle" class="icon-btn" title="Цэс">☰</button><div class="top-title" id="pageTitle">Нүүр</div><div class="top-user"><span id="userInfo"></span><button id="pwOpenBtn" class="secondary">Нууц үг солих</button><button id="logoutBtn" class="secondary">Гарах</button></div></div>
  <div class="content">
  <section id="homeBox" data-page="home">
   <div class="home-filter"><div><label>Он</label><select id="homeYear"></select></div><div id="homeStatus" class="message"></div></div>
@@ -106,7 +105,7 @@ body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
    <div class="chart-card"><div class="chart-top"><h3>Сургалтын баталгаажилт</h3><button class="menu-btn" data-chart="trChart">☰</button></div><div class="chart-svg" id="trChart"></div></div>
   </div>
  </section>
-<section id="adminBox" class="card hidden page-off"><h2>АДМИН — байгууллага</h2><button id="createBtn">30 байгууллага үүсгэх</button><button id="downloadBtn" class="green hidden">CSV татах</button><div id="adminStatus" class="message"></div><pre id="adminResult"></pre></section>
+
 <!-- СУРГАЛТЫН ТӨЛӨВЛӨГӨӨ УДИРДАХ -->
 <!-- УДИРДЛАГЫН DASHBOARD -->
 <section id="dashboardBox" class="card hidden page-off">
@@ -223,6 +222,12 @@ body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
 <section id="statBox" class="card page-off"><h2>Сургалтын статистик (баталгаажсан)</h2><div class="grid"><div><label>Он</label><select id="statYear"></select></div><div><label>Аймаг</label><select id="statProvince"><option value="">Бүх аймаг</option></select></div></div><button id="statRefresh">Статистик шинэчлэх</button><div id="statStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Төрөл</th><th>Сургалт</th><th>Хүн</th><th>Эрэгтэй</th><th>Эмэгтэй</th></tr></thead><tbody id="statTable"></tbody></table></div><div id="statTotals"></div></section>
 <section id="reportListBox" class="card page-off"><div class="toolbar"><h2>Тайлангууд</h2><button id="refreshBtn">Шинэчлэх</button></div><div id="reportStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Аймаг/сум</th><th>Төрөл</th><th>Хугацаа</th><th>Гарчиг</th><th>Тайлбар</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead><tbody id="reportTable"></tbody></table></div></section>
 </div></div></div>
+<!-- Нууц үг солих -->
+<div id="pwModal" class="hidden" style="position:fixed;inset:0;background:#0008;z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px">
+<div class="login-card"><h2 id="pwTitle" style="margin-top:0">Нууц үг солих</h2><p id="pwNote" style="color:#475569;margin:0 0 6px"></p>
+<label>Шинэ нууц үг (8+ тэмдэгт)</label><input id="pwNew" type="password" autocomplete="new-password">
+<label>Шинэ нууц үг (давтах)</label><input id="pwNew2" type="password" autocomplete="new-password">
+<button id="pwSave">Хадгалах</button><button id="pwCancel" class="secondary">Болих</button><div id="pwStatus" class="message"></div></div></div>
 <!-- Файл preview modal -->
 <div id="fileModal" class="hidden" style="position:fixed;inset:0;background:#0009;z-index:9999;padding:3vw">
 <div style="background:white;border-radius:12px;height:94vh;padding:12px;display:flex;flex-direction:column;gap:8px">
@@ -252,7 +257,7 @@ if(profile.role==="admin"){ $("dashYear").innerHTML="";for(let yy=new Date().get
 if (profile.role === "admin") {
   await initPlanForm();
 }
-$("adminBox").classList.toggle("hidden",profile.role!=="admin");$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(profile.role==="admin")await loadDashboard();if(isReviewer())await loadReviewQueue()}
+$("reviewBox").classList.toggle("hidden",!isReviewer());$("loginSection").classList.add("hidden");$("appSection").classList.remove("hidden");initYears();await loadProvinces();await loadReports();fillTrainingTypes();await loadTrainingLocations();$("statYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("statYear").add(new Option(y,y));let ps=await sb.from("provinces").select("id,name").order("id");if(ps.error)throw ps.error;(ps.data||[]).forEach(p=>$("statProvince").add(new Option(p.name,p.id)));await loadStatistics();await loadTrainingRecords();if(profile.role==="admin")await loadDashboard();if(isReviewer())await loadReviewQueue()}
 
 function dashRange(y,p){if(p==="q1")return [y+"-01-01",y+"-03-31"];if(p==="q2")return [y+"-04-01",y+"-06-30"];if(p==="q3")return [y+"-07-01",y+"-09-30"];if(p==="q4")return [y+"-10-01",y+"-12-31"];if(p==="h1")return [y+"-01-01",y+"-06-30"];if(p==="h2")return [y+"-07-01",y+"-12-31"];return [y+"-01-01",y+"-12-31"]}
 let dashboardExportData=null;
@@ -729,47 +734,7 @@ async function reviewReport(id,status){
   if(profile.role==="admin")await loadDashboard();
  }catch(e){message("reviewStatus","Баталгаажуулах алдаа: "+safeError(e),"error")}
 }
-async function createInstitutions() {
-    if (profile.role !== "admin") {
-        alert("Админ эрх шаардлагатай");
-        return;
-    }
 
-    if (!confirm("30 байгууллага үүсгэх үү?")) {
-        return;
-    }
-
-    $("createBtn").disabled = true;
-    message("adminStatus", "Үүсгэж байна...");
-
-    try {
-        const result = await sb.functions.invoke("super-handler", {
-            body: {}
-        });
-
-        if (result.error) {
-            throw result.error;
-        }
-
-        adminData = result.data;
-        $("adminResult").textContent = JSON.stringify(result.data, null, 2);
-
-        message(
-            "adminStatus",
-            result.data.message || "Амжилттай дууслаа",
-            "success"
-        );
-
-        $("downloadBtn").classList.remove("hidden");
-
-    } catch (error) {
-        console.error("FUNCTION ERROR:", error);
-        message("adminStatus", "Алдаа: " + error.message, "error");
-
-    } finally {
-        $("createBtn").disabled = false;
-    }
-}function downloadCSV(){if(!adminData?.results)return;let rows=[["Код","Байгууллага","Email","Нууц үг","Төлөв","Алдаа"],...adminData.results.map(x=>[x.code,x.name,x.email,x.password,x.status,x.error])];let csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(",")).join("\r\n"),a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="30_baiguullaga.csv";a.click()}
 const trainingTypes=["Гамшгаас хамгаалах иж бүрэн сургууль","Гамшгаас хамгаалах Команд штабын сургууль","Удирдах албан тушаалтны","Сургуулийн ахлах ангийн сурагчдын","Сургуулийн дунд ангийн сурагчдын","Сургуулийн бага ангийн сурагчдын","Сургуулийн өмнөх боловсролын байгууллага","Гамшгаас хамгаалах алба, мэргэжлийн анги","Их, дээд сургууль, МСҮТ, коллежийн","Төрийн захиргаа болон хуулийн этгээдийн","Цэргийн дүйцүүлэх албаны","Сайн дурын иргэн, бүлгийн","Иргэдийн","Хөгжлийн бэрхшээлтэй иргэдийн"];
 function fillTrainingTypes(){if($("trType").options.length===0)trainingTypes.forEach(t=>$("trType").add(new Option(t,t)))}
 
@@ -878,8 +843,6 @@ $("planCancelBtn").onclick = cancelPlanEdit;
 $("planRefreshBtn").onclick = loadPlans;
 
 $("logoutBtn").onclick=logout;
-$("createBtn").onclick=createInstitutions;
-$("downloadBtn").onclick=downloadCSV;
 $("refreshBtn").onclick=loadReports;
 $("saveBtn").onclick=saveReport;
 $("cancelBtn").onclick=cancelEdit;
@@ -899,7 +862,7 @@ async function init(){try{if(!window.supabase)throw Error("Supabase JS CDN ач�
 <script>
 "use strict";
 /* ===== Навигаци (edoc маягийн цэс) ===== */
-const PAGES={home:["homeBox","Нүүр"],dashboard:["dashboardBox","Удирдлагын Dashboard"],reportForm:["reportFormBox","Тайлан бүртгэх"],reports:["reportListBox","Тайлангууд"],review:["reviewBox","Тайлан хянах"],trainingForm:["trFormBox","Сургалт бүртгэх"],trainingList:["trListBox","Сургалтын бүртгэлүүд"],stats:["statBox","Сургалтын статистик"],plan:["planBox","Сургалтын төлөвлөгөө"],admin:["adminBox","Админ — байгууллага"]};
+const PAGES={home:["homeBox","Нүүр"],dashboard:["dashboardBox","Удирдлагын Dashboard"],reportForm:["reportFormBox","Тайлан бүртгэх"],reports:["reportListBox","Тайлангууд"],review:["reviewBox","Тайлан хянах"],trainingForm:["trFormBox","Сургалт бүртгэх"],trainingList:["trListBox","Сургалтын бүртгэлүүд"],stats:["statBox","Сургалтын статистик"],plan:["planBox","Сургалтын төлөвлөгөө"]};
 const pageAllowed=k=>{const el=$(PAGES[k][0]);return el&&!el.classList.contains("hidden")};
 function refreshNav(){document.querySelectorAll("#sideNav [data-go]").forEach(a=>a.style.display=pageAllowed(a.dataset.go)?"":"none")}
 function go(k){if(!PAGES[k]||!pageAllowed(k))k="home";
@@ -956,4 +919,30 @@ document.addEventListener("click",e=>{const b=e.target.closest(".menu-btn");if(b
  const _er=editReport;editReport=function(id){_er(id);go("reportForm")};
  $("refreshBtn").onclick=()=>loadReports();$("trRefreshBtn").onclick=()=>loadTrainingRecords();}
 </script>
-</body></html>
+
+<script>
+"use strict";
+/* ===== Нууц үгийн аюулгүй байдал ===== */
+const pwRecovery=/type=recovery/.test(location.hash);let pwForced=false;
+function openPw(forced,note){pwForced=forced;$("pwNew").value="";$("pwNew2").value="";message("pwStatus","");
+ $("pwTitle").textContent=forced?"Шинэ нууц үг тохируулах":"Нууц үг солих";$("pwNote").textContent=note||"";
+ $("pwCancel").classList.toggle("hidden",forced);$("pwModal").classList.remove("hidden");$("pwNew").focus()}
+async function savePw(){const a=$("pwNew").value,b=$("pwNew2").value;
+ if(a.length<8)return message("pwStatus","Нууц үг дор хаяж 8 тэмдэгт байна.","error");
+ if(!/[A-Za-zА-Яа-яӨөҮүЁё]/.test(a)||!/\d/.test(a))return message("pwStatus","Үсэг болон тоо хоёуланг агуулна.","error");
+ if(a!==b)return message("pwStatus","Давтсан нууц үг таарахгүй байна.","error");
+ $("pwSave").disabled=true;message("pwStatus","Хадгалж байна...");
+ try{const x=await sb.auth.updateUser({password:a,data:{pw_changed:true}});if(x.error)throw x.error;currentUser=x.data.user;
+  message("pwStatus","Нууц үг амжилттай солигдлоо.","success");setTimeout(()=>$("pwModal").classList.add("hidden"),900)}
+ catch(e){message("pwStatus","Алдаа: "+safeError(e),"error")}finally{$("pwSave").disabled=false}}
+async function forgotPw(){const email=$("email").value.trim();if(!email)return message("loginStatus","Дээрх талбарт и-мэйлээ бичээд дахин дарна уу.","error");
+ try{const x=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(x.error)throw x.error;
+  message("loginStatus","Нууц үг сэргээх холбоосыг "+email+" хаяг руу илгээлээ. И-мэйлээ шалгана уу.","success")}
+ catch(e){message("loginStatus","Алдаа: "+safeError(e),"error")}}
+$("pwOpenBtn").onclick=()=>openPw(false);$("pwCancel").onclick=()=>{if(!pwForced)$("pwModal").classList.add("hidden")};
+$("pwSave").onclick=savePw;$("forgotBtn").onclick=forgotPw;
+{const _show2=showApp;showApp=async function(){await _show2();
+  if(pwRecovery)openPw(true,"Нууц үг сэргээх холбоосоор орлоо. Шинэ нууц үгээ оруулна уу.");
+  else if(!currentUser?.user_metadata?.pw_changed)openPw(true,"Аюулгүй байдлын үүднээс анхны нууц үгээ өөрийн нууц үгээр солино уу.")}}
+const _lo=logout;logout=async function(){$("pwModal").classList.add("hidden");await _lo()};$("logoutBtn").onclick=()=>logout();
+</script></body></html>
