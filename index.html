@@ -249,7 +249,13 @@ async function loadDashboard(){
   });
   all.forEach(r=>{const nm=normName(unitNameById[String(r.unit_id)]);if(nm)trainingCountsByName[nm]=(trainingCountsByName[nm]||0)+1});
   // Тайланг province_id-аар бөөгнөрүүлэхгүй; байгууллагын нэр/unit_id-аар тусгаарлана.
-  const comparison=(prov.data||[]).map(p=>{const key=normName(p.name),reports=reportCountsByName[key]||0,trainings=trainingCountsByName[key]||0;return {id:p.id,name:p.name,reports,trainings,hasReport:reports>0}}).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  // Харьцуулалтын мөрүүдийг provinces биш units хүснэгтээс үүсгэнэ.
+  // Тайлан/сургалтын тоо нь байгууллагын unit_id-аар яг таарна.
+  const comparison=(unitsResult.data||[]).map(u=>{
+    const id=String(u.id),reports=submitted.filter(r=>String(r.unit_id)===id).length;
+    const trainings=all.filter(r=>String(r.unit_id)===id).length;
+    return {id:u.id,name:u.name,reports,trainings,hasReport:reports>0};
+  }).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
   // 32 нэгжийн суурь тоо UI-д тогтоосон; нэгжийн ID давхардалгүй тайлан ирүүлснийг тоолно.
   const submittedUnits=submittedUnitIds.size,totalUnits=32,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
