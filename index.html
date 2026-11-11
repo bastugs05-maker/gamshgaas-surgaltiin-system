@@ -233,31 +233,32 @@ async function loadDashboard(){
   const approvedReports=(reportsResult.data||[]).filter(r=>r.review_status==="Баталгаажсан");
   const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
   const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
-  // Тайлангийн нэгжийг province_id биш unit_id-аар тоолно.
-  // Улаанбаатар province_id=22 мөн адил жагсаалтад орно.
-  const submitted=filteredReports.filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
-  const trainingCounts={},submittedUnitIds=new Set();
-  const unitNameById={};(unitsResult.data||[]).forEach(u=>unitNameById[String(u.id)]=u.name);
-  const normName=v=>String(v||"").toLowerCase().replace(/[^а-яөүёa-z0-9]/g,"");
-  const reportCountsByName={},trainingCountsByName={};
+  // Тайланг бодит байгууллагын unit_id-аар тоолно.
+  const submitted=(filteredReports||[]).filter(r =>
+    r.unit_id != null &&
+    (r.submitted_at || ["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status))
+  );
+  const reportCountByUnit={},trainingCountByUnit={},submittedUnitIds=new Set();
   submitted.forEach(r=>{
-    if(r.unit_id!==null&&r.unit_id!==undefined){
-      submittedUnitIds.add(String(r.unit_id));
-      const nm=normName(unitNameById[String(r.unit_id)]);
-      if(nm)reportCountsByName[nm]=(reportCountsByName[nm]||0)+1;
+    const uid=String(r.unit_id);
+    reportCountByUnit[uid]=(reportCountByUnit[uid]||0)+1;
+    submittedUnitIds.add(uid);
+  });
+  all.forEach(r=>{
+    if(r.unit_id!=null){
+      const uid=String(r.unit_id);
+      trainingCountByUnit[uid]=(trainingCountByUnit[uid]||0)+1;
     }
   });
-  all.forEach(r=>{const nm=normName(unitNameById[String(r.unit_id)]);if(nm)trainingCountsByName[nm]=(trainingCountsByName[nm]||0)+1});
-  // Тайланг province_id-аар бөөгнөрүүлэхгүй; байгууллагын нэр/unit_id-аар тусгаарлана.
-  // Харьцуулалтын мөрүүдийг provinces биш units хүснэгтээс үүсгэнэ.
-  // Тайлан/сургалтын тоо нь байгууллагын unit_id-аар яг таарна.
+  // units хүснэгтийн id/name-ийг шууд ашиглана. Нэрээр тааруулахгүй.
   const comparison=(unitsResult.data||[]).map(u=>{
-    const id=String(u.id),reports=submitted.filter(r=>String(r.unit_id)===id).length;
-    const trainings=all.filter(r=>String(r.unit_id)===id).length;
+    const uid=String(u.id);
+    const reports=reportCountByUnit[uid]||0;
+    const trainings=trainingCountByUnit[uid]||0;
     return {id:u.id,name:u.name,reports,trainings,hasReport:reports>0};
-  }).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  }).sort((x,y)=>y.reports-x.reports||x.name.localeCompare(y.name,"mn"));
   // 32 нэгжийн суурь тоо UI-д тогтоосон; нэгжийн ID давхардалгүй тайлан ирүүлснийг тоолно.
-  const submittedUnits=submittedUnitIds.size,totalUnits=32,rate=totalUnits?submittedUnits/totalUnits*100:0;
+  const totalUnits=comparison.length,submittedUnits=submittedUnitIds.size,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
   if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
   if($("dashSubmissionRate")) $("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
