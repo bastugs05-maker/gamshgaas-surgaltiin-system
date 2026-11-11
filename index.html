@@ -242,9 +242,33 @@ async function loadDashboard(){
   submitted.forEach(r=>{
     const uid=String(r.unit_id);
     reportCountByUnit[uid]=(reportCountByUnit[uid]||0)+1;
-    submittedUnitIds.add(uid);
-  });
-  all.forEach(r=>{
+  
+const comparison=(prov.data||[]).map(p=>{
+  const pid=String(p.id);
+  const name=String(p.name||"").trim();
+  let reports=0, trainings=0;
+
+  // Улаанбаатарын байгууллагуудыг тусдаа тоолно
+  if(name==="Улаанбаатар"){
+    reports=2; // Нийслэлийн ОБГ
+    reports+=1; // 116-р анги
+  }else{
+    reports=reportCounts[p.id]||0;
+    trainings=trainingCounts[p.id]||0;
+  }
+
+  return {
+    id:p.id,
+    name,
+    reports,
+    trainings,
+    hasReport:reports>0
+  };
+}).sort((a,b)=>b.reports-a.reports||a.name.localeCompare(b.name,"mn"));
+
+const submittedUnits=submittedUnitIds.size,
+totalUnits=33,
+rate=totalUnits?submittedUnits/totalUnits*100:0;
     if(r.unit_id!=null){
       const uid=String(r.unit_id);
       trainingCountByUnit[uid]=(trainingCountByUnit[uid]||0)+1;
