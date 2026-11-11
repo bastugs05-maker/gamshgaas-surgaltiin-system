@@ -241,25 +241,67 @@ async function loadDashboard(){
       .filter(p => String(p.name || "").trim() !== "Улаанбаатар")
       .map(p => String(p.name || "").trim())
   );
-  const districtNames = new Set([
+  const districtNames = [
     "Багануур", "Багахангай", "Баянгол дүүрэг", "Баянзүрх дүүрэг",
     "Налайх", "Сонгинохайрхан", "Сүхбаатар дүүрэг", "Хан-Уул",
     "Чингэлтэй"
-  ]);
-  const specialNames = new Set([
-    "Нийслэлийн Онцгой байдлын газар",
-    "Гамшгаас хамгаалах 116-р анги",
-    "Гамшгаас хамгаалах 116 дугаар анги",
-    "Гамшгаас хамгаалах сургалтын 116 дугаар анги"
-  ]);
+  ];
+  const normUnitName = value => String(value || "")
+    .trim().replace(/\s+/g, " ").toLowerCase();
 
-  // 32 үндсэн байгууллагыг л харуулна. Сум/салбар нэгжийг хасна.
-  const baseUnits = (units.data || []).filter(u => {
-    const name = String(u.name || "").trim();
-    return aimagNames.has(name) ||
-      districtNames.has(name) ||
-      specialNames.has(name);
+  const unitsList = units.data || [];
+  const pickOne = (names, preferred) => {
+    const wanted = new Set(names.map(normUnitName));
+    const matches = unitsList.filter(u => wanted.has(normUnitName(u.name)));
+    // Давхардсан нэр/alias байвал canonical нэртэй нэг бичлэгийг сонгоно.
+    matches.sort((a,b) =>
+      (normUnitName(a.name) === normUnitName(preferred) ? -1 : 0) -
+      (normUnitName(b.name) === normUnitName(preferred) ? -1 : 0)
+    );
+    return matches[0] || null;
+  };
+
+  // Үндсэн 21 аймгийн төв байгууллага — аймаг бүрээс ганц
+  const baseUnits = [];
+  aimagNames.forEach(name => {
+    const u = pickOne([name], name);
+    if (u) baseUnits.push(u);
   });
+
+  // Улаанбаатарын 9 дүүрэг — дүүрэг бүрээс ганц
+  districtNames.forEach(name => {
+    const u = pickOne([name], name);
+    if (u) baseUnits.push(u);
+  });
+
+  // Тусгай 2 байгууллага — өөр нэршлийн alias-уудыг нэг мөр болгоно
+  const centralOB = pickOne([
+    "Нийслэлийн Онцгой байдлын газар",
+    "Нийслэлийн Онцгой байдлын газар "
+  ], "Нийслэлийн Онцгой байдлын газар");
+  if (centralOB) baseUnits.push(centralOB);
+
+  const unit116 = pickOne([
+    "Гамшгаас хамгаалах сургалтын 116 дугаар анги",
+    "Гамшгаас хамгаалах 116-р анги",
+    "Гамшгаас хамгаалах 116 дугаар анги"
+  ], "Гамшгаас хамгаалах сургалтын 116 дугаар анги");
+  if (unit116) baseUnits.push(unit116);
+
+  // Давхардсан unit ID болон ижил байгууллагын нэрийг эцэслэн арилгана
+  const uniqueUnits = [];
+  const seenUnitIds = new Set();
+  const seenUnitNames = new Set();
+  baseUnits.forEach(u => {
+    const id = String(u.id);
+    const name = normUnitName(u.name);
+    if (!seenUnitIds.has(id) && !seenUnitNames.has(name)) {
+      seenUnitIds.add(id);
+      seenUnitNames.add(name);
+      uniqueUnits.push(u);
+    }
+  });
+  baseUnits.splice(0, baseUnits.length, ...uniqueUnits);
 
   // Тайлан болон сургалтыг байгууллагын unit_id-аар тоолно.
   const unitReportCounts = {};
