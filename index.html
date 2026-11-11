@@ -209,102 +209,76 @@ async function loadDashboard(){
  const y=Number($("dashYear").value||new Date().getFullYear()),[from,to]=dashRange(y,$("dashPeriod").value);
  message("dashStatus","Dashboard мэдээлэл тооцож байна...");
  try{
-  const [rec,prov,unitsResult,plans]=await Promise.all([
-   sb.from("training_records").select("province_id,participant_total,review_status,training_date").gte("training_date",from).lte("training_date",to),
+  const [rec,prov,plans,reportsResult,unitsResult]=await Promise.all([
+   sb.from("training_records").select("province_id,participant_total,review_status,training_date,unit_id").gte("training_date",from).lte("training_date",to),
    sb.from("provinces").select("id,name").order("id"),
-   sb.from("units").select("id,name,province_id"),
    sb.from("training_plans").select("province_id,planned_trainings").eq("plan_year",y),
-   sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y)
+   sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y),
+   sb.from("units").select("id,province_id,name")
   ]);
-  if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(unitsResult.error)throw unitsResult.error;if(plans.error)throw plans.error;
+  if(rec.error)throw rec.error;if(prov.error)throw prov.error;if(plans.error)throw plans.error;if(reportsResult.error)throw reportsResult.error;if(unitsResult.error)throw unitsResult.error;
   const all=rec.data||[],approved=all.filter(r=>r.review_status==="Баталгаажсан"),pending=all.filter(r=>["Илгээсэн","Хүлээгдэж буй","Хяналтад"].includes(r.review_status));
-  if($("dashTrainings"))$("dashTrainings").textContent=all.length.toLocaleString();if($("dashPeople"))$("dashPeople").textContent=all.reduce((s,r)=>s+Number(r.participant_total||0),0).toLocaleString();if($("dashApproved"))$("dashApproved").textContent=approved.length.toLocaleString();if($("dashPending"))$("dashPending").textContent=pending.length.toLocaleString();
-  const a={},people={},ap={},pl={};approved.forEach(r=>{a[r.province_id]=(a[r.province_id]||0)+1;ap[r.province_id]=(ap[r.province_id]||0)+1;people[r.province_id]=(people[r.province_id]||0)+Number(r.participant_total||0)});all.forEach(r=>{if(r.review_status!=="Баталгаажсан")a[r.province_id]=(a[r.province_id]||0)+0});(plans.data||[]).forEach(r=>pl[r.province_id]=(pl[r.province_id]||0)+Number(r.planned_trainings||0));
+  if($("dashTrainings"))$("dashTrainings").textContent=all.length.toLocaleString();
+  if($("dashPeople"))$("dashPeople").textContent=all.reduce((s,r)=>s+Number(r.participant_total||0),0).toLocaleString();
+  if($("dashApproved"))$("dashApproved").textContent=approved.length.toLocaleString();
+  if($("dashPending"))$("dashPending").textContent=pending.length.toLocaleString();
+  const a={},people={},ap={},pl={};
+  approved.forEach(r=>{a[r.province_id]=(a[r.province_id]||0)+1;ap[r.province_id]=(ap[r.province_id]||0)+1;people[r.province_id]=(people[r.province_id]||0)+Number(r.participant_total||0)});
+  (plans.data||[]).forEach(r=>pl[r.province_id]=(pl[r.province_id]||0)+Number(r.planned_trainings||0));
   const rows=(prov.data||[]).map(p=>({name:p.name,actual:ap[p.id]||0,people:people[p.id]||0,planned:pl[p.id]||0,pct:pl[p.id]?((ap[p.id]||0)/pl[p.id]*100):null}));
   if($("dashProvinceTable"))$("dashProvinceTable").innerHTML=rows.map(r=>`<tr><td>${r.name}</td><td>${r.actual}</td><td>${r.people}</td><td>${r.actual}</td><td>${r.pct===null?"—":r.pct.toFixed(1)+"%"}</td></tr>`).join("");
-  const max=Math.max(1,...rows.map(r=>r.actual));if($("dashProvinceBars"))$("dashProvinceBars").innerHTML=rows.filter(r=>r.actual||r.planned).map(r=>`<div style="display:grid;grid-template-columns:120px 1fr 50px;gap:8px;align-items:center"><span>${r.name}</span><div style="height:16px;background:#e5eaf0;border-radius:5px"><div style="height:16px;width:${r.actual/max*100}%;background:#16834a;border-radius:5px"></div></div><b>${r.actual}</b></div>`).join("");
-  if(arguments.length===0){} // keep this function compatible with existing refresh controls
-  const rpt=arguments; // unused; report result is read from the query below
-  const reportsResult=await sb.from("reports").select("province_id,unit_id,report_year,report_month,report_quarter,report_half,review_status,submitted_at").eq("report_year",y);
-  if(reportsResult.error)throw reportsResult.error;
+  const max=Math.max(1,...rows.map(r=>r.actual));
+  if($("dashProvinceBars"))$("dashProvinceBars").innerHTML=rows.filter(r=>r.actual||r.planned).map(r=>`<div style="display:grid;grid-template-columns:120px 1fr 50px;gap:8px;align-items:center"><span>${r.name}</span><div style="height:16px;background:#e5eaf0;border-radius:5px"><div style="height:16px;width:${r.actual/max*100}%;background:#16834a;border-radius:5px"></div></div><b>${r.actual}</b></div>`).join("");
   const period=$("dashPeriod").value;
-  const filteredReports=(reportsResult.data||[]).filter(r=>{if(period==="all")return true;if(period.startsWith("q"))return Number(r.report_quarter)===Number(period.slice(1));if(period.startsWith("h"))return Number(r.report_half)===Number(period.slice(1));return true});
-  // Approved report performance table: only admin-confirmed reports count.
-  const approvedReports=(reportsResult.data||[]).filter(r=>r.review_status==="Баталгаажсан");
-  const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
-  const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
-  // Тайланг бодит байгууллагын unit_id-аар тоолно.
-  const submitted=(filteredReports||[]).filter(r =>
-    r.unit_id != null &&
-    (r.submitted_at || ["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status))
-  );
-  const reportCountByUnit={},trainingCountByUnit={},submittedUnitIds=new Set();
-  submitted.forEach(r=>{
-    const uid=String(r.unit_id);
-    reportCountByUnit[uid]=(reportCountByUnit[uid]||0)+1;
-  
-const comparison=(prov.data||[]).map(p=>{
-  const pid=String(p.id);
-  const name=String(p.name||"").trim();
-  let reports=0, trainings=0;
-
-  // Улаанбаатарын байгууллагуудыг тусдаа тоолно
-  if(name==="Улаанбаатар"){
-    reports=2; // Нийслэлийн ОБГ
-    reports+=1; // 116-р анги
-  }else{
-    reports=reportCounts[p.id]||0;
-    trainings=trainingCounts[p.id]||0;
-  }
-
-  return {
-    id:p.id,
-    name,
-    reports,
-    trainings,
-    hasReport:reports>0
-  };
-}).sort((a,b)=>b.reports-a.reports||a.name.localeCompare(b.name,"mn"));
-
-const submittedUnits=submittedUnitIds.size,
-totalUnits=33,
-rate=totalUnits?submittedUnits/totalUnits*100:0;
-    if(r.unit_id!=null){
-      const uid=String(r.unit_id);
-      trainingCountByUnit[uid]=(trainingCountByUnit[uid]||0)+1;
-    }
+  const reportRows=(reportsResult.data||[]).filter(r=>{
+   if(period==="all")return true;
+   if(period.startsWith("q"))return Number(r.report_quarter)===Number(period.slice(1));
+   if(period.startsWith("h"))return Number(r.report_half)===Number(period.slice(1));
+   if(period==="year")return !r.report_month&&!r.report_quarter&&!r.report_half;
+   return true;
   });
-  // Dashboard дээр зөвхөн 21 аймаг + Улаанбаатарын мөр гаргана.
-  // Нийслэлийн ОБГ болон 116-р ангийн тайланг УБ аймгийн мөрөнд нэгтгэхгүй.
-  const normUnitName=v=>String(v||"").toLowerCase().replace(/[^а-яөүёa-z0-9]/g,"");
+  const approvedReports=reportRows.filter(r=>r.review_status==="Баталгаажсан");
+  const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
+  const perfBody=$("approvedReportPerformance");
+  if(perfBody)perfBody.innerHTML=(prov.data||[]).map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
+
+  // Тайлангийн илгээсэн төлөвийг reports.unit_id -> units.id холбоосоор яг тоолно.
   const unitRows=unitsResult.data||[];
+  const submittedReports=reportRows.filter(r=>r.unit_id!=null&&(r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status)));
+  const reportCountByUnit={};
+  submittedReports.forEach(r=>{const id=String(r.unit_id);reportCountByUnit[id]=(reportCountByUnit[id]||0)+1;});
+  const submittedUnitIds=new Set(Object.keys(reportCountByUnit));
+  // Аймаг/дүүргийн хуучин жагсаалтыг хэвээр үлдээнэ; тухайн province-д тайлантай байгууллага байвал "Ирүүлсэн".
+  const reportCountByProvince={};
+  submittedReports.forEach(r=>{if(r.province_id!=null)reportCountByProvince[String(r.province_id)]=(reportCountByProvince[String(r.province_id)]||0)+1;});
   const comparison=(prov.data||[]).map(p=>{
-    const pName=normUnitName(p.name);
-    const ownUnit=unitRows.find(u=>Number(u.province_id)===Number(p.id)&&normUnitName(u.name)===pName);
-    const uid=ownUnit?String(ownUnit.id):null;
-    const reports=uid?(reportCountByUnit[uid]||0):0;
-    const trainings=uid?(trainingCountByUnit[uid]||0):0;
-    return {id:p.id,name:p.name,reports,trainings,hasReport:reports>0};
-  }).sort((x,y)=>y.reports-x.reports||x.name.localeCompare(y.name,"mn"));
-  // KPI: 33 тайлан ирүүлэх байгууллага; аймгийн график 22 мөртэй.
+   const n=String(p.name||"").trim(),pid=String(p.id);
+   let reports=reportCountByProvince[pid]||0;
+   // Ulaanbaatar institution reports are kept separate from UB province row.
+   if(n==="Улаанбаатар")reports=0;
+   return {id:p.id,name:n,reports,trainings:all.filter(t=>String(t.province_id)===pid).length,hasReport:reports>0};
+  }).sort((x,z)=>x.name.localeCompare(z.name,"mn"));
+  // 33 байгууллагын суурь (21 аймаг + UB болон харьяа байгууллагуудын системийн одоогийн бүртгэл)
   const totalUnits=33,submittedUnits=submittedUnitIds.size,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
-  if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
-  if($("dashSubmissionRate")) $("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
-  const missingUnits=Math.max(0,comparison.length-submittedUnits);
-  const yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
-  if($("dashTotalReports"))$("dashTotalReports").textContent=submitted.length.toLocaleString();
   if($("dashSubmittedUnits"))$("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
+  if($("dashSubmissionRate"))$("dashSubmissionRate").textContent=rate.toFixed(1)+"%";
+  const missingUnits=Math.max(0,totalUnits-submittedUnits);
+  const yearPerformance=`${all.length} сургалт / ${totalPeople} хүн`;
+  if($("dashTotalReports"))$("dashTotalReports").textContent=submittedReports.length.toLocaleString();
   if($("dashMissingUnits"))$("dashMissingUnits").textContent=missingUnits.toLocaleString()+" байгууллага";
   if($("dashYearPerformance"))$("dashYearPerformance").textContent=yearPerformance;
-  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits:comparison.length,submissionRate:rate,totalReports:submitted.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
-  if($("cmpSubmitted"))$("cmpSubmitted").textContent=submittedUnits+" / "+comparison.length;if($('cmpRate'))$('cmpRate').textContent=rate.toFixed(1)+"%";if($('cmpReports'))$('cmpReports').textContent=submitted.length.toLocaleString();if($('cmpTrainings'))$('cmpTrainings').textContent=all.length.toLocaleString();
-  const maxReports=Math.max(1,...comparison.map(r=>r.reports));if($('cmpBars'))$('cmpBars').innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
-  if($('cmpTable'))$('cmpTable').innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
-  message("dashStatus",`${y} он ${$("dashPeriod").selectedOptions[0].text}: ${all.length} сургалт, ${all.reduce((s,r)=>s+Number(r.participant_total||0),0)} хүн.`, "success");
+  dashboardExportData={year:y,period:$("dashPeriod").selectedOptions[0].text,summary:{totalTrainings:all.length,totalPeople,approved:approved.length,pending:pending.length,submittedUnits,totalUnits,submissionRate:rate,totalReports:submittedReports.length,missingUnits,yearPerformance},provinceRows:rows,comparison};
+  if($("cmpSubmitted"))$("cmpSubmitted").textContent=submittedUnits+" / "+totalUnits;
+  if($("cmpRate"))$("cmpRate").textContent=rate.toFixed(1)+"%";
+  if($("cmpReports"))$("cmpReports").textContent=submittedReports.length.toLocaleString();
+  if($("cmpTrainings"))$("cmpTrainings").textContent=all.length.toLocaleString();
+  const maxReports=Math.max(1,...comparison.map(r=>r.reports));
+  if($("cmpBars"))$("cmpBars").innerHTML=comparison.map((r,i)=>`<div style="display:grid;grid-template-columns:30px minmax(90px,130px) 1fr 35px;gap:8px;align-items:center"><b>${i+1}</b><span>${r.name}</span><div style="height:14px;background:#e5eaf0;border-radius:5px;overflow:hidden"><div style="height:14px;width:${r.reports/maxReports*100}%;background:${r.hasReport?'#16834a':'#cbd5e1'}"></div></div><b>${r.reports}</b></div>`).join("");
+  if($("cmpTable"))$("cmpTable").innerHTML=comparison.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}</td><td>${r.reports}</td><td>${r.trainings}</td><td style="color:${r.hasReport?'#16834a':'#c0392b'};font-weight:bold">${r.hasReport?'Ирүүлсэн':'Ирүүлээгүй'}</td></tr>`).join("");
+  message("dashStatus",`${y} он ${$("dashPeriod").selectedOptions[0].text}: ${all.length} сургалт, ${totalPeople} хүн.`, "success");
  }catch(e){message("dashStatus","Dashboard алдаа: "+safeError(e),"error")}
 }
-
 function initYears(){$("reportYear").innerHTML="";for(let y=new Date().getFullYear();y>=2020;y--)$("reportYear").add(new Option(y+" он",y));$("reportMonth").innerHTML="";for(let m=1;m<=12;m++)$("reportMonth").add(new Option(m+"-р сар",m))}
 
 
@@ -745,26 +719,9 @@ async function saveTraining(){let pid=$("trProvince").value,uid=$("trUnit").valu
 async function loadTrainingRecords(){if(!currentUser)return;message("trListStatus","Сургалтын бүртгэл ачаалж байна...");let q=sb.from("training_records").select("*").order("created_at",{ascending:false});if(!isReviewer())q=q.eq("created_by",currentUser.id);let x=await q;if(x.error)return message("trListStatus","Алдаа: "+x.error.message,"error");trainingRows=x.data||[];let pids=[...new Set(trainingRows.map(r=>r.province_id))],uids=[...new Set(trainingRows.map(r=>r.unit_id))],pm={},um={};if(pids.length){let a=await sb.from("provinces").select("id,name").in("id",pids);(a.data||[]).forEach(v=>pm[v.id]=v.name)}if(uids.length){let a=await sb.from("units").select("id,name").in("id",uids);(a.data||[]).forEach(v=>um[v.id]=v.name)}$("trListTable").innerHTML="";trainingRows.forEach((r,i)=>{let tr=document.createElement("tr");[i+1,r.training_date,(pm[r.province_id]||"")+" / "+(um[r.unit_id]||""),r.training_type,r.organization_name,r.participant_total,r.review_status||"—"].forEach(v=>{let td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});let td=document.createElement("td");if(r.certificate_file){let b=document.createElement("button");b.textContent="Файл нээх";b.onclick=()=>openFile(r.certificate_file);td.appendChild(b)}else td.textContent="Хавсаргаагүй";tr.appendChild(td);
 let act=document.createElement("td");
 if(isReviewer()){
- if(r.review_status!=="Баталгаажсан"){
-  let ok=document.createElement("button");ok.textContent="Баталгаажуулах";ok.className="green";ok.onclick=()=>reviewTrainingRecord(r.id,"Баталгаажсан");act.appendChild(ok);
-  let back=document.createElement("button");back.textContent="Буцаах";back.className="secondary";back.onclick=()=>reviewTrainingRecord(r.id,"Буцаасан");act.appendChild(back);
- }
  let del=document.createElement("button");del.textContent="Устгах";del.className="danger";del.title="Энэ бүртгэлийг бүрмөсөн устгах";del.onclick=()=>deleteTrainingRecord(r.id,r.certificate_file);act.appendChild(del)
 }else{act.textContent="—"}
 tr.appendChild(act);$("trListTable").appendChild(tr)});message("trListStatus","Нийт "+trainingRows.length+" бүртгэл.","success")}
-async function reviewTrainingRecord(id,status){
- if(!isReviewer())return message("trListStatus","Баталгаажуулах эрх шаардлагатай.","error");
- if(status==="Буцаасан"){const reason=prompt("Буцаах шалтгаан бичнэ үү");if(!reason)return}
- if(!confirm("Сургалтын бүртгэлийг "+status+" төлөвт шилжүүлэх үү?"))return;
- try{
-  const payload={review_status:status,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()};
-  const upd=await sb.from("training_records").update(payload).eq("id",id);if(upd.error)throw upd.error;
-  const chk=await sb.from("training_records").select("id,review_status").eq("id",id).maybeSingle();if(chk.error)throw chk.error;
-  if(!chk.data||chk.data.review_status!==status)throw Error("Төлөв DB-д хадгалагдсангүй. UPDATE/SELECT RLS policy шалгана уу.");
-  message("trListStatus","Сургалтын бүртгэл "+status+" төлөвтэй боллоо.","success");
-  await loadTrainingRecords();await loadStatistics();if(profile.role==="admin")await loadDashboard();
- }catch(e){message("trListStatus","Баталгаажуулах алдаа: "+safeError(e),"error")}
-}
 async function deleteTrainingRecord(id,filePath){
  if(!isReviewer())return message("trListStatus","Устгах эрх зөвхөн админ/хянагчид байна.","error");
  if(!confirm("Энэ сургалтын бүртгэл болон хавсаргасан файлыг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй."))return;
