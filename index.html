@@ -232,16 +232,30 @@ async function loadDashboard(){
   const approvedReports=(reportsResult.data||[]).filter(r=>r.review_status==="Баталгаажсан");
   const perf={};approvedReports.forEach(r=>{let z=perf[r.province_id]||(perf[r.province_id]={h1:0,h2:0,year:0,total:0});if(Number(r.report_half)===1)z.h1++;else if(Number(r.report_half)===2)z.h2++;else if(!r.report_half&&!r.report_month&&!r.report_quarter)z.year++;z.total++;});
   const perfBody=$("approvedReportPerformance");if(perfBody)perfBody.innerHTML=(prov.data||[]).map(p=>{let z=perf[p.id]||{h1:0,h2:0,year:0,total:0};return `<tr><td>${p.name}</td><td>${z.h1}</td><td>${z.h2}</td><td>${z.year}</td><td><b>${z.total}</b></td></tr>`}).join("");
-  // Харьцуулалтыг provinces (аймаг/сумын жагсаалт) биш units (32 байгууллага)-аас байгуулна.
-  // Тайлан болон сургалтыг зөвхөн unit_id-аар холбож, байгууллага бүр нэг мөр байна.
-  const submitted=(filteredReports).filter(r=>r.submitted_at||["Илгээсэн","Хянаж байна","Баталгаажсан","Буцаасан","Засварласан"].includes(r.review_status));
-  const reportCounts={},trainingCounts={},submittedUnitIds=new Set();
-  submitted.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);reportCounts[k]=(reportCounts[k]||0)+1;submittedUnitIds.add(k);}});
-  all.forEach(r=>{if(r.unit_id!=null){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1;}});
-  const unitMap=new Map();
-  (unitsResult.data||[]).forEach(u=>{if(u.id==null||!u.name)return;const name=String(u.name).replace(/\s+/g," ").trim();if(!name)return;unitMap.set(String(u.id),{id:u.id,name,reports:reportCounts[String(u.id)]||0,trainings:trainingCounts[String(u.id)]||0,hasReport:(reportCounts[String(u.id)]||0)>0});});
-  const comparison=[...unitMap.values()].sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=submittedUnitIds.size,totalUnits=comparison.length||32,rate=totalUnits?submittedUnits/totalUnits*100:0;
+  // Харьцуулалтыг өмнөх зөв бүтэцтэй адил provinces хүснэгтийн 32 мөрөөр байгуулна.
+  // units хүснэгтийн 323 сум/дүүргийн мөрийг энд жагсаахгүй.
+  const reportCountsByProvince={}, trainingCountsByProvince={}, submittedProvinceIds=new Set();
+  submitted.forEach(r=>{
+    if(r.province_id!=null){
+      const k=String(r.province_id);
+      reportCountsByProvince[k]=(reportCountsByProvince[k]||0)+1;
+      submittedProvinceIds.add(k);
+    }
+  });
+  all.forEach(r=>{
+    if(r.province_id!=null){
+      const k=String(r.province_id);
+      trainingCountsByProvince[k]=(trainingCountsByProvince[k]||0)+1;
+    }
+  });
+  const comparison=(prov.data||[]).map(p=>({
+    id:p.id,
+    name:String(p.name||"").replace(/\\s+/g," ").trim(),
+    reports:reportCountsByProvince[String(p.id)]||0,
+    trainings:trainingCountsByProvince[String(p.id)]||0,
+    hasReport:(reportCountsByProvince[String(p.id)]||0)>0
+  })).filter(p=>p.name).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
+  const submittedUnits=comparison.filter(u=>u.hasReport).length,totalUnits=comparison.length,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const yearPerformance=`${all.length} сургалт / ${all.reduce((s,r)=>s+Number(r.participant_total||0),0)} хүн`;
   if($("dashTotalReports"))$("dashTotalReports").textContent=submitted.length.toLocaleString();
