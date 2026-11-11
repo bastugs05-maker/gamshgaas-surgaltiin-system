@@ -116,7 +116,7 @@ body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
   <div class="card"><small>Баталгаажсан</small><h2 id="dashApproved">—</h2></div>
   <div class="card"><small>Хүлээгдэж буй</small><h2 id="dashPending">—</h2></div>
   <div class="card"><small>Нийт тайлан</small><h2 id="dashTotalReports">—</h2></div>
-  <div class="card"><small>Тайлан ирүүлсэн байгууллага</small><h2 id="dashSubmittedUnits">— / 32</h2></div>
+  <div class="card"><small>Тайлан ирүүлсэн байгууллага</small><h2 id="dashSubmittedUnits">—</h2></div>
   <div class="card"><small>Тайлан ирүүлээгүй байгууллага</small><h2 id="dashMissingUnits">—</h2></div>
   <div class="card"><small>Жилийн гүйцэтгэл</small><h2 id="dashYearPerformance">—</h2></div>
  </div>
@@ -130,7 +130,7 @@ body{background:#f4f6fa;font-family:"Segoe UI",Arial,sans-serif}
  <div class="table-wrap"><table><thead><tr><th>Аймаг</th><th>Бодит сургалт</th><th>Хүн</th><th>Баталгаажсан</th><th>Биелэлт</th></tr></thead><tbody id="dashProvinceTable"></tbody></table></div>
  <h3>Ажлын гүйцэтгэл — баталгаажсан хагас / бүтэн жилийн тайлан</h3><p class="muted">Зөвхөн админ баталгаажуулсан тайланг тооцно.</p><div class="table-wrap"><table><thead><tr><th>Аймаг</th><th>I хагас</th><th>II хагас</th><th>Бүтэн жилийн</th><th>Нийт баталгаажсан</th></tr></thead><tbody id="approvedReportPerformance"></tbody></table></div>
  <hr style="margin:24px 0;border:0;border-top:1px solid #e2e8f0">
- <h2>21 аймаг + Улаанбаатарын харьцуулалт</h2>
+ <h2>Аймаг, нийслэлийн харьцуулалт</h2>
  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
   <div class="card"><small>Тайлан ирүүлсэн нэгж</small><h2 id="cmpSubmitted">—</h2></div>
   <div class="card"><small>Тайлан ирүүлэлтийн хувь</small><h2 id="cmpRate">—</h2></div>
@@ -329,34 +329,41 @@ async function loadDashboard(){
     }
   });
   all.forEach(r=>{if(r.unit_id!==null&&r.unit_id!==undefined){const k=String(r.unit_id);trainingCounts[k]=(trainingCounts[k]||0)+1;}});
-  // ===== 32 байгууллагын харьцуулалт (тогтмол жагсаалт) =====
-  // 21 аймаг -> province_id-аар (сумын бүртгэл аймагтаа тооцогдоно)
-  // 9 дүүрэг, НОБГ, 116-р анги -> аймаг биш бүртгэлийн нэгж/байгууллагын нэрээр
-  const AIMAGS=["Архангай","Баян-Өлгий","Баянхонгор","Булган","Говь-Алтай","Говьсүмбэр","Дархан-Уул","Дорноговь","Дорнод","Дундговь","Завхан","Орхон","Өвөрхангай","Өмнөговь","Сүхбаатар","Сэлэнгэ","Төв","Увс","Ховд","Хөвсгөл","Хэнтий"];
-  const DISTRICTS=["Багануур","Багахангай","Баянгол","Баянзүрх","Налайх","Сонгинохайрхан","Сүхбаатар","Хан-Уул","Чингэлтэй"];
+  // ===== Харьцуулалтын байгууллагууд — Supabase-ийн report_orgs хүснэгтээс =====
+  // kind: aimag -> аймгийн нэрээр (сумын бүртгэл аймагтаа тооцогдоно)
+  //       special -> байгууллагын нэрээр (НОБГ, 116-р анги гэх мэт)
+  //       district -> аймаг биш бүртгэлийн нэгжийн нэрээр (нийслэлийн дүүрэг)
+  const FALLBACK_ORGS=[...["Архангай","Баян-Өлгий","Баянхонгор","Булган","Говь-Алтай","Говьсүмбэр","Дархан-Уул","Дорноговь","Дорнод","Дундговь","Завхан","Орхон","Өвөрхангай","Өмнөговь","Сүхбаатар","Сэлэнгэ","Төв","Увс","Ховд","Хөвсгөл","Хэнтий"].map(n=>({kind:"aimag",name:n,aliases:[n]})),
+    ...["Багануур","Багахангай","Баянгол","Баянзүрх","Налайх","Сонгинохайрхан","Сүхбаатар","Хан-Уул","Чингэлтэй"].map(n=>({kind:"district",name:n+" дүүрэг",aliases:[n]})),
+    {kind:"special",name:"Нийслэлийн Онцгой байдлын газар",aliases:["Нийслэлийн Онцгой байдлын газар"]},
+    {kind:"special",name:"Гамшгаас хамгаалах сургалтын 116 дугаар анги",aliases:["Гамшгаас хамгаалах 116-р анги","Гамшгаас хамгаалах сургалтын 116 дугаар анги"]}];
+  const orgRes=await sb.from("report_orgs").select("kind,name,aliases,sort_order").eq("active",true).order("sort_order").order("name");
+  const ORGS=(!orgRes.error&&orgRes.data&&orgRes.data.length)?orgRes.data:FALLBACK_ORGS;
+  if(orgRes.error)console.warn("report_orgs уншиж чадсангүй, кодын жагсаалтыг ашиглав:",orgRes.error.message);
   const lc=s=>String(s||"").toLocaleLowerCase("mn").replace(/[\s\-–—]+/g," ").trim();
-  const aimagOf=name=>{const n=lc(name).replace(/\s*(аймгийн\s*онцгой\s*байдлын\s*газар|аймаг)$/,"").trim();return AIMAGS.find(a=>lc(a)===n)||null};
-  const distOf=name=>{const n=lc(name).replace(/\s*(дүүргийн\s*онцгой\s*байдлын\s*газар|дүүрэг)$/,"").trim();return DISTRICTS.find(d=>lc(d)===n)||null};
-  const specialOf=name=>{const n=lc(name);if(/116/.test(n)&&n.includes("гамшгаас"))return "S:116";if(n.includes("нийслэлийн онцгой байдлын газар"))return "S:NOBG";return null};
-  const cmpRows=new Map();
-  AIMAGS.forEach(a=>cmpRows.set("A:"+a,{id:"A:"+a,name:a,reports:0,trainings:0}));
-  DISTRICTS.forEach(d=>cmpRows.set("D:"+d,{id:"D:"+d,name:d+" дүүрэг",reports:0,trainings:0}));
-  cmpRows.set("S:NOBG",{id:"S:NOBG",name:"Нийслэлийн Онцгой байдлын газар",reports:0,trainings:0});
-  cmpRows.set("S:116",{id:"S:116",name:"Гамшгаас хамгаалах сургалтын 116 дугаар анги",reports:0,trainings:0});
+  const stripAimag=n=>lc(n).replace(/\s*(аймгийн\s*онцгой\s*байдлын\s*газар|аймаг)$/,"").trim();
+  const stripDist=n=>lc(n).replace(/\s*(дүүргийн\s*онцгой\s*байдлын\s*газар|дүүрэг)$/,"").trim();
+  const cmpRows=new Map(),aimagIdx=new Map(),distIdx=new Map(),specials=[];
+  ORGS.forEach((o,i)=>{const key="O"+i;cmpRows.set(key,{id:key,name:o.name,reports:0,trainings:0});
+    const al=(o.aliases&&o.aliases.length?o.aliases:[o.name]);
+    if(o.kind==="aimag")al.forEach(a=>aimagIdx.set(stripAimag(a),key));
+    else if(o.kind==="district")al.forEach(a=>distIdx.set(stripDist(a),key));
+    else specials.push({key,al:al.map(lc)});});
+  const specialOf=n=>{const s=lc(n);if(!s)return null;const f=specials.find(x=>x.al.some(a=>s===a||s.includes(a)));return f?f.key:null};
   const provName={},unitName={};
   (prov.data||[]).forEach(p=>provName[String(p.id)]=p.name);
   (unitsRes.data||[]).forEach(u=>unitName[String(u.id)]=u.name);
   const rowKeyOf=r=>{
     const pn=provName[String(r.province_id)]||"",un=r.unit_id!=null?(unitName[String(r.unit_id)]||""):"";
-    const a=aimagOf(pn);if(a)return "A:"+a;                       // аймгийн аль ч сум
-    const s=specialOf(un)||specialOf(pn);if(s)return s;           // НОБГ, 116-р анги
-    const d=distOf(un);if(d)return "D:"+d;                        // нийслэлийн дүүрэг
+    const a=aimagIdx.get(stripAimag(pn));if(a)return a;           // аймгийн аль ч сум
+    const s=specialOf(un)||specialOf(pn);if(s)return s;           // тусгай байгууллага
+    const d=distIdx.get(stripDist(un));if(d)return d;              // нийслэлийн дүүрэг
     return null;
   };
   submitted.forEach(r=>{const k=rowKeyOf(r);if(k)cmpRows.get(k).reports++});
   all.forEach(r=>{const k=rowKeyOf(r);if(k)cmpRows.get(k).trainings++});
   const comparison=[...cmpRows.values()].map(x=>({...x,hasReport:x.reports>0})).sort((a,b)=>b.reports-a.reports||b.trainings-a.trainings||a.name.localeCompare(b.name,"mn"));
-  const submittedUnits=comparison.filter(x=>x.hasReport).length,totalUnits=32,rate=submittedUnits/totalUnits*100;
+  const submittedUnits=comparison.filter(x=>x.hasReport).length,totalUnits=comparison.length,rate=totalUnits?submittedUnits/totalUnits*100:0;
   const missingUnits=Math.max(0,totalUnits-submittedUnits);
   const totalPeople=all.reduce((s,r)=>s+Number(r.participant_total||0),0);
   if($("dashSubmittedUnits")) $("dashSubmittedUnits").textContent=`${submittedUnits} / ${totalUnits}`;
