@@ -1,184 +1,59 @@
-<!DOCTYPE html>
-<html lang="mn"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Гамшгаас хамгаалах сургалтын систем</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
-<link rel="stylesheet" href="css/style.css?v=7"></head><body>
-<section id="loginSection" class="login-wrap"><div class="login-card"><div class="brand">ГХС</div><div class="brand-sub">Гамшгаас хамгаалах сургалтын систем</div><h2>Системд нэвтрэх</h2><label>И-мэйл</label><input id="email" type="email" autocomplete="username"><label>Нууц үг</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn" style="width:100%;margin:16px 0 0">Нэвтрэх</button><button id="forgotBtn" type="button" style="background:none;color:#2f4f8f;padding:8px 0;margin:6px 0 0;font-weight:600">Нууц үгээ мартсан уу?</button><div id="loginStatus" class="message"></div></div></section>
-<div id="appSection" class="app hidden">
-<aside class="sidebar">
- <div class="logo"><span class="logo-mark">ГХС</span><span class="logo-sub">Гамшгаас хамгаалах сургалтын систем</span></div>
- <nav id="sideNav">
-  <a class="nav-item" data-go="home">Нүүр</a>
-  <a class="nav-item" data-go="dashboard">Удирдлагын Dashboard</a>
-  <div class="nav-group open"><button class="nav-head">Тайлан <span class="chev">▶</span></button><div class="nav-sub">
-   <a data-go="reportForm">Тайлан бүртгэх</a><a data-go="reports">Тайлангууд</a><a data-go="review">Тайлан хянах</a></div></div>
-  <div class="nav-group open"><button class="nav-head">Сургалт <span class="chev">▶</span></button><div class="nav-sub">
-   <a data-go="trainingForm">Сургалт бүртгэх</a><a data-go="trainingList">Сургалтын бүртгэлүүд</a><a data-go="stats">Статистик</a></div></div>
-  <a class="nav-item" data-go="plan">Сургалтын төлөвлөгөө</a>
- </nav>
- <div class="ver">Хувилбар 2.0 © ОБЕГ</div>
-</aside>
-<div class="overlay" id="navOverlay"></div>
-<div class="main">
- <div class="topbar"><button id="navToggle" class="icon-btn" title="Цэс">☰</button><div class="top-title" id="pageTitle">Нүүр</div><div class="top-user"><span id="userInfo"></span><button id="pwOpenBtn" class="secondary">Нууц үг солих</button><button id="logoutBtn" class="secondary">Гарах</button></div></div>
- <div class="content">
- <section id="homeBox" data-page="home">
-  <div class="home-filter"><div><label>Он</label><select id="homeYear"></select></div><div id="homeStatus" class="message"></div></div>
-  <div class="panels">
-   <div class="panel teal"><div class="panel-head"><h3>Тайлан ирүүлэлт</h3><small id="homeRepTotal">Нийт тайлан 0</small></div>
-    <div class="tiles">
-     <div class="tile" data-go="reports"><span data-ic="ok"></span><div class="lbl">Баталгаажсан</div><div class="val" id="hR1">0</div></div>
-     <div class="tile" data-go="reports"><span data-ic="work"></span><div class="lbl">Хянагдаж байгаа</div><div class="val" id="hR2">0</div></div>
-     <div class="tile" data-go="reports"><span data-ic="back"></span><div class="lbl">Буцаагдсан</div><div class="val" id="hR3">0</div></div>
-     <div class="tile" data-go="reports"><span data-ic="draft"></span><div class="lbl">Ноорог</div><div class="val" id="hR4">0</div></div>
-    </div></div>
-   <div class="panel coral"><div class="panel-head"><h3>Сургалтын бүртгэл</h3><small id="homeTrTotal">Нийт сургалт 0</small></div>
-    <div class="tiles">
-     <div class="tile" data-go="trainingList"><span data-ic="ok"></span><div class="lbl">Баталгаажсан</div><div class="val" id="hT1">0</div></div>
-     <div class="tile" data-go="trainingList"><span data-ic="work"></span><div class="lbl">Хянагдаж байгаа</div><div class="val" id="hT2">0</div></div>
-     <div class="tile" data-go="trainingList"><span data-ic="back"></span><div class="lbl">Буцаагдсан</div><div class="val" id="hT3">0</div></div>
-     <div class="tile" data-go="stats"><span data-ic="people"></span><div class="lbl">Хамрагдсан хүн</div><div class="val" id="hT4">0</div></div>
-    </div></div>
-  </div>
-  <div class="charts">
-   <div class="chart-card"><div class="chart-top"><h3>Тайлангийн хяналт</h3><button class="menu-btn" data-chart="repChart">☰</button></div><div class="chart-svg" id="repChart"></div></div>
-   <div class="chart-card"><div class="chart-top"><h3>Сургалтын баталгаажилт</h3><button class="menu-btn" data-chart="trChart">☰</button></div><div class="chart-svg" id="trChart"></div></div>
-  </div>
- </section>
+"use strict";
+/* ===== Нууц үгийн аюулгүй байдал ===== */
+const pwRecovery=/type=recovery/.test(location.hash);let pwForced=false;
+function openPw(forced,note){pwForced=forced;$("pwNew").value="";$("pwNew2").value="";message("pwStatus","");
+ $("pwTitle").textContent=forced?"Шинэ нууц үг тохируулах":"Нууц үг солих";$("pwNote").textContent=note||"";
+ $("pwCancel").classList.toggle("hidden",forced);$("pwModal").classList.remove("hidden");$("pwNew").focus()}
+async function savePw(){const a=$("pwNew").value,b=$("pwNew2").value;
+ if(a.length<8)return message("pwStatus","Нууц үг дор хаяж 8 тэмдэгт байна.","error");
+ if(!/[A-Za-zА-Яа-яӨөҮүЁё]/.test(a)||!/\d/.test(a))return message("pwStatus","Үсэг болон тоо хоёуланг агуулна.","error");
+ if(a!==b)return message("pwStatus","Давтсан нууц үг таарахгүй байна.","error");
+ $("pwSave").disabled=true;message("pwStatus","Хадгалж байна...");
+ try{const x=await sb.auth.updateUser({password:a,data:{pw_changed:true}});if(x.error)throw x.error;currentUser=x.data.user;
+  message("pwStatus","Нууц үг амжилттай солигдлоо.","success");setTimeout(()=>{$("pwModal").classList.add("hidden");emNudge()},900)}
+ catch(e){message("pwStatus","Алдаа: "+safeError(e),"error")}finally{$("pwSave").disabled=false}}
+async function forgotPw(){const email=$("email").value.trim();if(!email)return message("loginStatus","Дээрх талбарт и-мэйлээ бичээд дахин дарна уу.","error");
+ try{const x=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(x.error)throw x.error;
+  message("loginStatus","Нууц үг сэргээх холбоосыг "+email+" хаяг руу илгээлээ. И-мэйлээ шалгана уу.","success")}
+ catch(e){message("loginStatus","Алдаа: "+safeError(e),"error")}}
+$("pwOpenBtn").onclick=()=>openPw(false);$("pwCancel").onclick=()=>{if(!pwForced)$("pwModal").classList.add("hidden")};
+$("pwSave").onclick=savePw;$("forgotBtn").onclick=forgotPw;
+{const _show2=showApp;showApp=async function(){await _show2();
+  if(pwRecovery)openPw(true,"Нууц үг сэргээх холбоосоор орлоо. Шинэ нууц үгээ оруулна уу.");
+  else if(!currentUser?.user_metadata?.pw_changed)openPw(true,"Аюулгүй байдлын үүднээс анхны нууц үгээ өөрийн нууц үгээр солино уу.");
+  else emNudge()}}
+const _lo=logout;logout=async function(){$("pwModal").classList.add("hidden");await _lo()};$("logoutBtn").onclick=()=>logout();
 
-<!-- СУРГАЛТЫН ТӨЛӨВЛӨГӨӨ УДИРДАХ -->
-<!-- УДИРДЛАГЫН DASHBOARD -->
-<section id="dashboardBox" class="card hidden page-off">
- <div class="toolbar"><h2>Удирдлагын Dashboard</h2><div><button id="dashRefresh" class="secondary">Шинэчлэх</button><button id="exportExcel" class="green">Excel татах</button><button id="exportPdf" class="danger">PDF татах</button></div></div>
- <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-  <div class="card"><small>Нийт сургалт</small><h2 id="dashTrainings">—</h2></div>
-  <div class="card"><small>Нийт хамрагдсан хүн</small><h2 id="dashPeople">—</h2></div>
-  <div class="card"><small>Баталгаажсан</small><h2 id="dashApproved">—</h2></div>
-  <div class="card"><small>Хүлээгдэж буй</small><h2 id="dashPending">—</h2></div>
-  <div class="card"><small>Нийт тайлан</small><h2 id="dashTotalReports">—</h2></div>
-  <div class="card"><small>Тайлан ирүүлсэн байгууллага</small><h2 id="dashSubmittedUnits">—</h2></div>
-  <div class="card"><small>Тайлан ирүүлээгүй байгууллага</small><h2 id="dashMissingUnits">—</h2></div>
-  <div class="card"><small>Жилийн гүйцэтгэл</small><h2 id="dashYearPerformance">—</h2></div>
- </div>
- <div class="grid">
-  <div><label>Тайлангийн он</label><select id="dashYear"></select></div>
-  <div><label>Хугацаа</label><select id="dashPeriod"><option value="all">Бүтэн жил</option><option value="q1">I улирал</option><option value="q2">II улирал</option><option value="q3">III улирал</option><option value="q4">IV улирал</option><option value="h1">I хагас жил</option><option value="h2">II хагас жил</option></select></div>
- </div>
- <div id="dashStatus" class="message"></div>
- <h3>Аймгийн гүйцэтгэл</h3>
- <div id="dashProvinceBars" style="display:grid;gap:9px"></div>
- <div class="table-wrap"><table><thead><tr><th>Аймаг</th><th>Бодит сургалт</th><th>Хүн</th><th>Баталгаажсан</th><th>Биелэлт</th></tr></thead><tbody id="dashProvinceTable"></tbody></table></div>
- <h3>Ажлын гүйцэтгэл — баталгаажсан хагас / бүтэн жилийн тайлан</h3><p class="muted">Зөвхөн админ баталгаажуулсан тайланг тооцно.</p><div class="table-wrap"><table><thead><tr><th>Аймаг</th><th>I хагас</th><th>II хагас</th><th>Бүтэн жилийн</th><th>Нийт баталгаажсан</th></tr></thead><tbody id="approvedReportPerformance"></tbody></table></div>
- <hr style="margin:24px 0;border:0;border-top:1px solid #e2e8f0">
- <h2>Аймаг, нийслэлийн харьцуулалт</h2>
- <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-  <div class="card"><small>Тайлан ирүүлсэн нэгж</small><h2 id="cmpSubmitted">—</h2></div>
-  <div class="card"><small>Тайлан ирүүлэлтийн хувь</small><h2 id="cmpRate">—</h2></div>
-  <div class="card"><small>Нийт тайлан</small><h2 id="cmpReports">—</h2></div>
-  <div class="card"><small>Нийт сургалт</small><h2 id="cmpTrainings">—</h2></div>
- </div>
- <h3>Тайлан ирүүлэлтийн график — эрэмбэ</h3>
- <div id="cmpBars" style="display:grid;gap:8px"></div>
- <h3>Аймаг, нийслэлийн эрэмбэлсэн хүснэгт</h3>
- <div class="table-wrap"><table><thead><tr><th>№</th><th>Аймаг / Нийслэл</th><th>Тайлан</th><th>Сургалт</th><th>Ирүүлсэн эсэх</th></tr></thead><tbody id="cmpTable"></tbody></table></div>
-</section>
-<section id="planBox" class="card hidden page-off">
-  <h2>Сургалтын төлөвлөгөө — Удирдлага</h2>
-
-  <div class="grid">
-    <div>
-      <label>Аймаг / Нийслэл / Байгууллага</label>
-      <select id="planProvince"></select>
-    </div>
-
-    <div>
-      <label>Төлөвлөгөөний он</label>
-      <select id="planYear"></select>
-    </div>
-
-    <div>
-      <label>Төлөвлөгөөний хугацаа</label>
-      <select id="planPeriod">
-        <option value="I улирал">I улирал</option>
-        <option value="II улирал">II улирал</option>
-        <option value="III улирал">III улирал</option>
-        <option value="IV улирал">IV улирал</option>
-        <option value="I хагас жил">I хагас жил</option>
-        <option value="II хагас жил">II хагас жил</option>
-        <option value="Бүтэн жил">Бүтэн жил</option>
-      </select>
-    </div>
-
-    <div>
-      <label>Төлөвлөсөн сургалтын тоо</label>
-      <input id="planCount" type="number" min="0" value="0">
-    </div>
-  </div>
-
-  <input id="planEditId" type="hidden">
-
-  <button id="planSaveBtn">Төлөвлөгөө хадгалах</button>
-  <button id="planCancelBtn" class="secondary hidden">Болих</button>
-
-  <div id="planStatus" class="message"></div>
-
-  <div class="toolbar">
-    <h2>Төлөвлөгөөний нэгтгэл</h2>
-    <button id="planRefreshBtn" class="secondary">Шинэчлэх</button>
-  </div>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>№</th>
-          <th>Аймаг / Байгууллага</th>
-          <th>Он</th>
-          <th>Хугацаа</th>
-          <th>Сургалтын тоо</th>
-          <th>Үйлдэл</th>
-        </tr>
-      </thead>
-      <tbody id="planTable"></tbody>
-    </table>
-  </div>
-</section>
-
-<section id="reportFormBox" class="card page-off"><h2 id="formTitle">Тайлан бүртгэх</h2><input id="editId" type="hidden"><div class="grid">
-<div><label>Аймаг / Нийслэл</label><select id="province"></select></div><div><label>Сум / Дүүрэг</label><select id="unit"></select></div>
-<div><label>Тайлангийн төрөл</label><select id="reportType"><option>SM1</option><option>Сургалтын тайлан</option><option>Мэдээлэл</option><option>Бусад</option></select></div>
-<div><label>Хугацаа</label><select id="period"><option value="month">Сарын тайлан</option><option value="quarter">Улирлын тайлан</option><option value="half">Хагас жилийн тайлан</option><option value="year">Жилийн тайлан</option></select></div>
-<div><label>Он</label><select id="reportYear"></select></div><div id="monthBox"><label>Сар</label><select id="reportMonth"></select></div>
-<div id="quarterBox" class="hidden"><label>Улирал</label><select id="reportQuarter"><option value="1">I</option><option value="2">II</option><option value="3">III</option><option value="4">IV</option></select></div><div id="halfBox" class="hidden"><label>Хагас жил</label><select id="reportHalf"><option value="1">I хагас</option><option value="2">II хагас</option></select></div></div>
-<label>Тайлангийн гарчиг</label><input id="title"><label>Тайлбар / Агуулга</label><textarea id="description"></textarea><label>Тайлангийн файл (10MB хүртэл)</label><input id="reportFile" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
-<label>Илгээх төлөв</label><select id="reportSubmitStatus"><option value="Ноорог">Ноорог хадгалах</option><option value="Илгээсэн">Хяналтад илгээх</option></select><button id="saveBtn">Тайлан хадгалах</button><button id="cancelBtn" class="secondary hidden">Болих</button><div id="formStatus" class="message"></div></section>
-<section id="reviewBox" class="card hidden page-off"><h2>Ерөнхий газар — Тайлан хянах</h2><label>Хяналтын тайлбар / буцаах шалтгаан</label><textarea id="reviewComment"></textarea><button id="reviewRefresh" class="secondary">Ирсэн тайлан шинэчлэх</button><div id="reviewStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>Аймаг/сум</th><th>Төрөл</th><th>Хугацаа</th><th>Гарчиг</th><th>Файл</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead><tbody id="reviewTable"></tbody></table></div></section>
-<section id="trFormBox" class="card page-off"><h2>Сургалтын баталгааны бүртгэл</h2><div class="grid">
-<div><label>Огноо</label><input id="trDate" type="date"></div><div><label>Аймаг</label><select id="trProvince"></select></div><div><label>Сум</label><select id="trUnit"></select></div><div><label>Сургалтын төрөл</label><select id="trType"></select></div>
-<div><label>Байгууллагын төрөл</label><select id="trOrgType"><option>Төрийн байгууллага</option><option>Хувийн байгууллага</option><option>Төрийн бус байгууллага</option><option>Бусад</option></select></div><div><label>Байгууллагын нэр</label><input id="trOrgName"></div>
-<div><label>Нийт</label><input id="trTotal" type="number" min="0" value="0"></div><div><label>Эрэгтэй</label><input id="trMale" type="number" min="0" value="0"></div><div><label>Эмэгтэй</label><input id="trFemale" type="number" min="0" value="0"></div><div><label>Хэлбэр</label><select id="trFormat"><option>Танхим</option><option>Цахим</option><option>Дадлага</option></select></div><div><label>Сэдэв</label><select id="trTopic"><option>Гал түймрийн аюулаас урьдчилан сэргийлэх</option><option>Газар хөдлөлт</option><option>Үер</option><option>Анхны тусламж</option><option>Гамшгийн үеийн бэлэн байдал</option><option>Бусад</option></select></div></div>
-<label>Сэдэв (Бусад)</label><input id="trTopicOther"><label>Баталгааны файл (PDF/Word/JPG/PNG, 10MB хүртэл)</label><input id="trFile" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"><button id="trSaveBtn" class="green">Бүртгэл хадгалах</button><div id="trStatus" class="message"></div></section>
-<section id="trListBox" class="card page-off"><div class="toolbar"><h2>Сургалтын бүртгэлүүд — баталгааны файл</h2><button id="trRefreshBtn" class="secondary">Шинэчлэх</button></div><div id="trListStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Огноо</th><th>Аймаг/сум</th><th>Төрөл</th><th>Байгууллага</th><th>Хүн</th><th>Төлөв</th><th>Файл</th><th>Устгах</th></tr></thead><tbody id="trListTable"></tbody></table></div></section>
-<section id="statBox" class="card page-off"><h2>Сургалтын статистик (баталгаажсан)</h2><div class="grid"><div><label>Он</label><select id="statYear"></select></div><div><label>Аймаг</label><select id="statProvince"><option value="">Бүх аймаг</option></select></div></div><button id="statRefresh">Статистик шинэчлэх</button><div id="statStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Төрөл</th><th>Сургалт</th><th>Хүн</th><th>Эрэгтэй</th><th>Эмэгтэй</th></tr></thead><tbody id="statTable"></tbody></table></div><div id="statTotals"></div></section>
-<section id="reportListBox" class="card page-off"><div class="toolbar"><h2>Тайлангууд</h2><button id="refreshBtn">Шинэчлэх</button></div><div id="reportStatus" class="message"></div><div class="table-wrap"><table><thead><tr><th>№</th><th>Аймаг/сум</th><th>Төрөл</th><th>Хугацаа</th><th>Гарчиг</th><th>Тайлбар</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead><tbody id="reportTable"></tbody></table></div></section>
-</div></div></div>
-<!-- Нууц үг солих -->
-<div id="pwModal" class="hidden" style="position:fixed;inset:0;background:#0008;z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px">
-<div class="login-card"><h2 id="pwTitle" style="margin-top:0">Нууц үг солих</h2><p id="pwNote" style="color:#475569;margin:0 0 6px"></p>
-<label>Шинэ нууц үг (8+ тэмдэгт)</label><input id="pwNew" type="password" autocomplete="new-password">
-<label>Шинэ нууц үг (давтах)</label><input id="pwNew2" type="password" autocomplete="new-password">
-<button id="pwSave">Хадгалах</button><button id="pwCancel" class="secondary">Болих</button><div id="pwStatus" class="message"></div></div></div>
-<!-- Файл preview modal -->
-<div id="fileModal" class="hidden" style="position:fixed;inset:0;background:#0009;z-index:9999;padding:3vw">
-<div style="background:white;border-radius:12px;height:94vh;padding:12px;display:flex;flex-direction:column;gap:8px">
-<div class="toolbar"><strong id="fileModalTitle">Баталгааны файл</strong><div><button id="fileDownloadBtn" class="green">Татах</button><button id="fileCloseBtn" class="danger">Хаах</button></div></div>
-<div id="filePreview" style="flex:1;overflow:auto"></div><div id="fileModalStatus" class="message"></div>
-</div></div>
-<script src="js/app.js?v=7"></script>
-<script src="js/layout.js?v=7"></script>
-
-<script src="js/security.js?v=7"></script></body></html>
+/* ===== Нэвтрэх и-мэйлээ өөрийн хаягаар солих ===== */
+const emFake=()=>/@example\.org$/i.test(currentUser?.email||"");
+document.body.insertAdjacentHTML("beforeend",`<div id="emModal" class="hidden" style="position:fixed;inset:0;background:#0008;z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px">
+<div class="login-card"><h2 style="margin-top:0">Нэвтрэх и-мэйл солих</h2><p id="emNote" style="color:#475569;margin:0 0 6px"></p>
+<label>Одоогийн нэвтрэх хаяг</label><input id="emCur" disabled>
+<label>Шинэ и-мэйл хаяг (өөрийн бодит хаяг)</label><input id="emNew" type="email" inputmode="email" autocomplete="email" placeholder="жишээ: tuv.obg@gmail.com">
+<label>Шинэ и-мэйл (давтах)</label><input id="emNew2" type="email" inputmode="email" autocomplete="off">
+<label>Одоогийн нууц үг (баталгаажуулах)</label><input id="emPw" type="password" autocomplete="current-password">
+<button id="emSave">Хадгалах</button><button id="emCancel" class="secondary">Дараа</button><div id="emStatus" class="message"></div></div></div>`);
+const emBtn=document.createElement("button");emBtn.id="emOpenBtn";emBtn.className="secondary";emBtn.textContent="И-мэйл";emBtn.title="Нэвтрэх и-мэйлээ солих";
+$("pwOpenBtn").parentNode.insertBefore(emBtn,$("pwOpenBtn"));
+function openEm(note){$("emCur").value=currentUser?.email||"";$("emNew").value="";$("emNew2").value="";$("emPw").value="";message("emStatus","");
+ $("emNote").textContent=note||"";$("emModal").classList.remove("hidden");$("emNew").focus()}
+function emNudge(){if(emFake()&&!sessionStorageGet("em_skip"))openEm("Таны нэвтрэх хаяг түр хаяг байна. Цаашид өөрийн и-мэйл хаягаараа нэвтэрч, нууц үгээ мартвал сэргээх боломжтой болохын тулд бодит и-мэйлээ оруулна уу.")}
+function sessionStorageGet(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
+function sessionStorageSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
+async function saveEm(){const a=$("emNew").value.trim().toLowerCase(),b=$("emNew2").value.trim().toLowerCase(),pw=$("emPw").value;
+ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a))return message("emStatus","И-мэйл хаяг буруу байна.","error");
+ if(/@example\.org$/.test(a))return message("emStatus","Өөрийн бодит и-мэйл хаягаа оруулна уу.","error");
+ if(a!==b)return message("emStatus","Давтсан и-мэйл таарахгүй байна.","error");
+ if(!pw)return message("emStatus","Одоогийн нууц үгээ оруулна уу.","error");
+ $("emSave").disabled=true;message("emStatus","Хадгалж байна...");
+ try{const x=await sb.rpc("change_login_email",{p_new_email:a,p_password:pw});
+  if(x.error){if(/change_login_email|function/i.test(x.error.message||"")&&/find|exist/i.test(x.error.message||""))throw Error("Энэ боломж хараахан идэвхжээгүй байна. Админд хандана уу.");throw x.error}
+  await sb.auth.refreshSession();const u=await sb.auth.getUser();if(u.data?.user)currentUser=u.data.user;
+  $("userInfo").textContent=currentUser.email||x.data;$("emCur").value=x.data;
+  message("emStatus","Амжилттай солигдлоо. Дараагийн удаа "+x.data+" хаяг болон одоогийн нууц үгээрээ нэвтэрнэ.","success");
+  setTimeout(()=>$("emModal").classList.add("hidden"),2500)}
+ catch(e){message("emStatus","Алдаа: "+safeError(e),"error")}finally{$("emSave").disabled=false}}
+emBtn.onclick=()=>openEm("Цаашид энэ шинэ хаягаараа нэвтэрнэ. Нууц үг өөрчлөгдөхгүй.");
+$("emCancel").onclick=()=>{sessionStorageSet("em_skip","1");$("emModal").classList.add("hidden")};
+$("emSave").onclick=saveEm;
+{const _lo2=logout;logout=async function(){$("emModal").classList.add("hidden");await _lo2()};$("logoutBtn").onclick=()=>logout();}
